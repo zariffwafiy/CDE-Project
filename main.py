@@ -10,7 +10,7 @@ def jaccard_similarity(set1, set2):
 def main():
     # Data dictionary
     data1_path = "C:/Users/PC/OneDrive - Universiti Malaya/Documents/Python Scripts/CDE/data/Data Document PRPC Track2- GE APM Ver.01 - zarif.csv"
-    data2_path = "C:/Users/PC/OneDrive - Universiti Malaya/Documents/Python Scripts/CDE/data/PETRONAS Data Standard - All -  July 2023.csv"
+    data2_path = "C:/Users/PC/OneDrive - Universiti Malaya/Documents/Python Scripts/CDE/data/PETRONAS Data Standard - All -  July 2023.csv" 
 
     data1 = pd.read_csv(data1_path)
     data2 = pd.read_csv(data2_path)
