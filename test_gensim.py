@@ -5,6 +5,7 @@ corpus_file = "corpus.txt"
 with open(corpus_file, "r") as file:
     corpus = file.readlines()
 
+# tokenize
 sentences = [sentence.strip().split() for sentence in corpus]
 
 # train
