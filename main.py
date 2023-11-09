@@ -9,8 +9,8 @@ def jaccard_similarity(set1, set2):
 
 def main():
     # Data dictionary
-    data1_path = "C:/Users/PC/OneDrive - Universiti Malaya/Documents/Python Scripts/CDE/data/Data Document PRPC Track2- GE APM Ver.01 - zarif.csv"
-    data2_path = "C:/Users/PC/OneDrive - Universiti Malaya/Documents/Python Scripts/CDE/data/PETRONAS Data Standard - All -  July 2023.csv" 
+    data1_path = "data/Data Document PRPC Track2- GE APM Ver.01 - zarif.csv"
+    data2_path = "data/PETRONAS Data Standard - All -  July 2023.csv" 
 
     data1 = pd.read_csv(data1_path)
     data2 = pd.read_csv(data2_path)
@@ -30,7 +30,7 @@ def main():
     for set1,original_name in zip(data1["FIELD NAME/DATA ATTRIBUTE(S)"], data1_names):
         result_df[original_name] = data2["DATA ELEMENT"].apply(lambda set2: round(jaccard_similarity(set(set1), set(set2)), 4))
     
-    result_df.to_csv("result.csv", encoding="utf-8", index=False)
+    result_df.to_csv("result1.csv", encoding="utf-8", index=False)
 
 if __name__ == "__main__":
     main()
