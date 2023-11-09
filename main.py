@@ -5,7 +5,7 @@ def jaccard_similarity(set1, set2):
     intersection = len(set1 & set2)
     union = len(set1 | set2)
     result = intersection / union if union != 0 else 0
-    return result
+    return result 
 
 def main():
     # Data dictionary
