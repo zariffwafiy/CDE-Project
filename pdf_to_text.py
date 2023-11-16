@@ -1,4 +1,6 @@
 import fitz  # PyMuPDF
+import glob
+import os
 
 def extract_text_from_pdf(pdf_path, txt_output_path):
     # Open the PDF file in binary mode
@@ -19,8 +21,12 @@ def extract_text_from_pdf(pdf_path, txt_output_path):
     # Close the PDF file
     pdf_document.close()
 
-# Example usage
-pdf_path = 'data\PETRONAS-Integrated-Report-2022.pdf'
-txt_output_path = r"data\PETRONAS-Integrated-Report-2022.txt"
+if __name__ == "__main__":
+    input_dir = "corpus/"
+    txt_output_path = r"corpus\Corpus.txt"
 
-extract_text_from_pdf(pdf_path, txt_output_path)
+    pdf_files = glob.glob(os.path.join(input_dir, "*.pdf"))
+
+    for pdf_file in pdf_files:
+        # extract
+        extract_text_from_pdf(pdf_file, txt_output_path)
