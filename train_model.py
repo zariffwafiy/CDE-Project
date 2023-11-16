@@ -11,6 +11,10 @@ data = [
     # Add more examples with different classes here
 ]
 
+def preprocess(word):
+    word.lower()
+    return word
+
 # Split the data into training and testing sets
 train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
 
