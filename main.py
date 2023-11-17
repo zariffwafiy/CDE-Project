@@ -54,6 +54,7 @@ def cosine_similarity(vector1, vector2):
 
 
 def train_and_compute_similarity(corpus_file, word1, word2, vector_size=100, window=5, min_count=1, sg=0):
+    
     """
     Train a Word2Vec model on a given corpus file and compute similarity between two words.
 
@@ -196,17 +197,55 @@ def main():
         result_df[original_name] = (score1 + score2 + score3 + score4 + score5) / 5
         """
         # spacy
-        # result_df[original_name] = data2["DATA ELEMENT"].apply(lambda data_element: round(semantic_similarity(field_description, data_element), 4))
+        """
+        result_df[original_name] = data2["DATA ELEMENT"].apply(
+            lambda data_element: round(
+                semantic_similarity(
+                    field_description, 
+                    data_element
+                ), 
+                4
+            )
+        )
+        """
 
         # jaccard sim
-        # result_df[original_name] = data2["DATA ELEMENT"].apply(lambda data_element: round(jaccard_similarity(field_description, data_element), 4))
+        """
+        result_df[original_name] = data2["DATA ELEMENT"].apply(
+            lambda data_element: round(
+                jaccard_similarity(
+                    field_description, 
+                    data_element
+                ), 
+                4
+            )
+        )
+        """
 
         # syntax cosine sim
-        result_df[original_name] = data2["DATA ELEMENT"].apply(lambda data_element: round(cosine_similarity(letter_frequency_vector(field_description), letter_frequency_vector(data_element)), 4))
+        result_df[original_name] = data2["DATA ELEMENT"].apply(
+            lambda data_element: round(
+                cosine_similarity(
+                    letter_frequency_vector(field_description), 
+                    letter_frequency_vector(data_element)
+                ), 
+                4,
+            )
+        )
 
+        """
         # semantic cosine sim
-        # result_df[original_name] = data2["DATA ELEMENT"].apply(lambda data_element: round(train_and_compute_similarity(corpus_file, field_description, data_element), 4))
-    
+        result_df[original_name] = data2["DATA ELEMENT"].apply(
+            lambda data_element: round(
+                train_and_compute_similarity(
+                    corpus_file, 
+                    field_description, 
+                    data_element
+                ), 
+                4
+            )
+        )
+        """
 
     # transpose if needed
     # result_df = result_df.set_index("DATA ELEMENT").T
