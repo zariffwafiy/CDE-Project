@@ -1,6 +1,6 @@
 import pickle
 from models import LanguageNgramModel, MissingLetterModel
-from abbreviation_spellchecker import noisy_channel
+from abbreviation_spellchecker import noisy_channel, train_and_save_models
 
 def load_and_apply_models(input_string, model_path):
     with open(model_path, 'rb') as model_file:
@@ -10,10 +10,9 @@ def load_and_apply_models(input_string, model_path):
     return result, big_lang_model, big_missing_model
 
 if __name__ == "__main__":
-    input_string = 'Ptro'
+
+    # load and use model 
+    input_string = 'enty_key'
     model_path = "abbreviation_spellchecker.pkl"
-    
     result, big_lang_model, big_missing_model = load_and_apply_models(input_string.lower(), model_path)
-    
-    # Use the loaded models or result as needed
     print(result)
