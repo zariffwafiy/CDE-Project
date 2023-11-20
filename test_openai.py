@@ -44,6 +44,6 @@ def openai_similarity(word1, word2):
         print(f"Exception in comparing '{word1}' with '{word2}': {str(e)}")
         return similarity_score
     
-word1 = "entity key"
-word2 = "functional location"
+word1 = "enty key"
+word2 = "entity key"
 openai_similarity(word1, word2)

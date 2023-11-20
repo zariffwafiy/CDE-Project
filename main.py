@@ -19,6 +19,8 @@ openai.api_key = "3be6ba13cc1f4a16bd5293d8feba2036"
 def openai_similarity(word1, word2):
     # openai
     try:
+        print("word1: " + word1)
+        print("word2: " + word2)
         # Construct a prompt for the specific input-reference pair
         prompt = f"Provide a precise semantic similarity score (0.xxxx) between '{word1}' and '{word2}'."
     
@@ -26,7 +28,7 @@ def openai_similarity(word1, word2):
         response = openai.Completion.create(
             engine='text-davinci-003',
             prompt=prompt,
-            max_tokens=20,
+            max_tokens=40,
             temperature=0.2,
             n=1,
             stop=None,
@@ -303,11 +305,7 @@ def main():
             )
         )
 
-
-    # transpose if needed
-    # result_df = result_df.set_index("DATA ELEMENT").T
-
-    output_path = "results/result_openai2.csv"
+    output_path = "results/result_openai_complete_domain.csv"
     result_df.to_csv(output_path, encoding="utf-8", index=False)
 
 if __name__ == "__main__":
