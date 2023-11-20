@@ -28,7 +28,7 @@ def openai_similarity(word1, word2):
         response = openai.Completion.create(
             engine='text-davinci-003',
             prompt=prompt,
-            max_tokens=40,
+            max_tokens=40, 
             temperature=0.2,
             n=1,
             stop=None,
