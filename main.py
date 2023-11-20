@@ -6,8 +6,52 @@ from models import LanguageNgramModel, MissingLetterModel
 from abbreviation_spellchecker import noisy_channel
 from gensim.models import Word2Vec
 import spacy
+import openai
+import re
+
+openai.api_type = "azure"
+openai.api_base = "https://openailx.openai.azure.com/"
+openai.api_version = "2022-12-01"
+openai.api_key = "3be6ba13cc1f4a16bd5293d8feba2036"
 
 # methodology for string comparison
+# open ai
+def openai_similarity(word1, word2):
+    # openai
+    try:
+        # Construct a prompt for the specific input-reference pair
+        prompt = f"Provide a precise semantic similarity score (0.xxxx) between '{word1}' and '{word2}'."
+    
+        # Call OpenAI API for this specific input-reference pair
+        response = openai.Completion.create(
+            engine='text-davinci-003',
+            prompt=prompt,
+            max_tokens=20,
+            temperature=0.2,
+            n=1,
+            stop=None,
+            logprobs=0
+        )
+
+        # print(response)
+
+        # Extract the similarity score using a regular expression
+        similarity_score_match = re.search(r'(\d+\.\d+)', response.choices[0].text)
+
+        if similarity_score_match:
+            similarity_score = round(float(similarity_score_match.group(1)), 4)
+            print(similarity_score)
+        else:
+            similarity_score = 0
+            raise ValueError("No numeric similarity score found in the response.")
+        return similarity_score
+        
+
+    except Exception as e:
+        similarity_score = 0
+        print(f"Exception in comparing '{word1}' with '{word2}': {str(e)}")
+        return similarity_score
+
 # spaCy model
 # nlp = spacy.load("en_core_web_lg")
 nlp = "" # dummy
@@ -107,8 +151,8 @@ def main():
     data2 = pd.read_csv(data2_path)
 
     # filter out data domain
-    # domains = data1["DATA DOMAIN "].iloc[0]
-    # data2 = data2[data2["DATA DOMAIN"].isin([domains])].reset_index(drop=True)
+    domains = data1["DATA DOMAIN "].iloc[0]
+    data2 = data2[data2["DATA DOMAIN"].isin([domains])].reset_index(drop=True).head(5)
 
     # column names of data dictionary for result df
     data1_names = data1["FIELD NAME/DATA ATTRIBUTE(S)"].tolist()
@@ -143,8 +187,8 @@ def main():
     corpus_file = "corpus\Corpus.txt"
 
     # iterate to apply cosine similarity model
-    for field_name, field_description, table_name, table_description, original_name in zip(
-            data1["FIELD NAME/DATA ATTRIBUTE(S)"], data1["FIELD DESCRIPTION"], data1["TABLE NAME"], data1["TABLE DESCRIPTION/SUB FOLDER NAME "], data1_names
+    for field_name, field_description, table_name, table_description, data_element, original_name in zip(
+            data1["FIELD NAME/DATA ATTRIBUTE(S)"], data1["FIELD DESCRIPTION"], data1["TABLE NAME"], data1["TABLE DESCRIPTION/SUB FOLDER NAME "], data2["DATA ELEMENT"], data1_names
         ):
         """
         # Calculate cosine similarity scores for each combination
@@ -221,7 +265,7 @@ def main():
             )
         )
         """
-
+        """
         # syntax cosine sim
         result_df[original_name] = data2["DATA ELEMENT"].apply(
             lambda data_element: round(
@@ -232,6 +276,7 @@ def main():
                 4,
             )
         )
+        """
 
         """
         # semantic cosine sim
@@ -247,10 +292,22 @@ def main():
         )
         """
 
+        # openai sim
+        result_df[original_name] = data2["DATA ELEMENT"].apply(
+            lambda data_element: round(
+                openai_similarity(
+                    field_description,
+                    data_element
+                ),
+                4
+            )
+        )
+
+
     # transpose if needed
     # result_df = result_df.set_index("DATA ELEMENT").T
 
-    output_path = "results/result_cossim.csv"
+    output_path = "results/result_openai2.csv"
     result_df.to_csv(output_path, encoding="utf-8", index=False)
 
 if __name__ == "__main__":

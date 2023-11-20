@@ -106,3 +106,9 @@ def train_and_save_models(corpus_path, save_path):
 
     with open(save_path, 'wb') as model_file:
         pickle.dump((big_lang_model, big_missing_model, all_letters), model_file)
+
+if __name__ == "__main__":
+    # train model
+    corpus_path = "corpus\Corpus.txt"
+    save_path = "abbreviation_spellchecker.pkl"
+    train_and_save_models(corpus_path, save_path)
