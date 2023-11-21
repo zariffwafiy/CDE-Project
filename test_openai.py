@@ -12,14 +12,14 @@ def openai_similarity(word1, word2):
     # openai
     try:
         # Construct a prompt for the specific input-reference pair
-        prompt = f"Provide a precise semantic similarity score (0.xxxx) between '{word1}' and '{word2}'."
+        prompt = f"Provide a semantic similarity score (0.xxxx) between '{word1}' and '{word2}'."
     
         # Call OpenAI API for this specific input-reference pair
         response = openai.Completion.create(
             engine='text-davinci-003',
             prompt=prompt,
-            max_tokens=20,
-            temperature=0.2,
+            max_tokens=30,
+            temperature=0.0,
             n=1,
             stop=None,
             logprobs=0
@@ -29,6 +29,7 @@ def openai_similarity(word1, word2):
 
         # Extract the similarity score using a regular expression
         similarity_score_match = re.search(r'(\d+\.\d+)', response.choices[0].text)
+        print(response.choices[0].text)
 
         if similarity_score_match:
             similarity_score = round(float(similarity_score_match.group(1)), 4)
@@ -36,14 +37,17 @@ def openai_similarity(word1, word2):
         else:
             similarity_score = 0
             raise ValueError("No numeric similarity score found in the response.")
+        
         return similarity_score
         
 
     except Exception as e:
         similarity_score = 0
+        # print reponse text below
+        print(response.choices[0].text)
         print(f"Exception in comparing '{word1}' with '{word2}': {str(e)}")
         return similarity_score
     
-word1 = "enty key"
-word2 = "entity key"
+word1 = "entity id"
+word2 = "description"
 openai_similarity(word1, word2)
