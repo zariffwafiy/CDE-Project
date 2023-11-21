@@ -12,7 +12,7 @@ def openai_similarity(word1, word2):
     # openai
     try:
         # Construct a prompt for the specific input-reference pair
-        prompt = f"Provide a semantic similarity score (0.xxxx) between '{word1}' and '{word2}'."
+        prompt = f"Provide a  semantic similarity score (0.xxxx) between '{word1}' and '{word2}'."
     
         # Call OpenAI API for this specific input-reference pair
         response = openai.Completion.create(
