@@ -1,0 +1,135 @@
+DATA ELEMENT,CC_EQUIP000_TUBE_MX_IN_PRES_N
+Functional Location,0.0
+Superior Functional Location,0.0
+Description,0.0
+Inventory No.,0.0
+Class,0.0
+Company Code,0.0
+Planning Plant,0.0
+Maintenance Plant,0.0
+Planner Group,0.0
+Main Work Center,0.0
+SCE Applicable,0.0
+SCE Group Barrier,0.0
+SCE Group,0.0
+PS Required,0.0
+Assurance Task,0.0
+Assurance Task Value,0.0
+Equipment,0.0
+Description,0.0
+Location,0.0
+Class,0.0
+Catalog Profile,0.0
+ABC Indicator,0.0
+Consequence Category,0.0
+Consequence Class,0.0
+Probability Class,0.0
+Notification Type,0.0
+Description,0.0
+System Status,0.0
+User Status,0.0
+Notification Number,0.0
+Notification Date,0.0
+Required Start Date,0.0
+Priority,0.0
+Symptom Code,0.0
+Object Part,0.0
+Damage Code,0.0
+Malfunction Start,0.0
+Malfunction End,0.0
+Breakdown,0.0
+Order Type,0.0
+Order Number,0.0
+Description,0.0
+System Status,0.0
+User Status,0.0
+Basic Start Date,0.0
+Basic Finish Date,0.0
+Actual Start,0.0
+Actual Finish,0.0
+Latest Allowed Finish Date,0.0
+Work Duration,0.0
+Number ,0.0
+Operation duration,0.0
+Group,0.0
+Group Counter,0.0
+Task List Description,0.0
+Strategy,0.0
+Usage,0.0
+Operation Number,0.0
+Plant,0.0
+Control Key,0.0
+Operation Description,0.0
+Number,0.0
+Duration,0.0
+Activity Type,0.0
+Master Inspection Characteristic,0.0
+Short text inspection characteristic,0.0
+Material BOM,0.0
+Industry Sector,0.0
+Description,0.0
+Component Number,0.0
+Object Description,0.0
+Quantity,0.0
+Unit of Measure,0.0
+Item Category,0.0
+MTBF,0.0
+MTBR,0.0
+Production Loss,0.0
+Production Loss,0.0
+Availability,0.0
+Production Efficiency,0.0
+Execution date,0.0
+No of RCFA,0.0
+No of Action Items,0.0
+Number of Bad Actor,0.0
+CoUR,0.0
+Production Deferment,0.0
+Repair Cost,0.0
+Recurrence,0.0
+Process Cycle Efficiency (PCE),0.0
+Maintenance Interval,0.0
+Maintenance Cost,0.0
+Risk Rating,0.0
+Equipment criticality,0.0
+Downtime (Shutdown/Slowdown),0.0
+Utilisation,0.0
+Production Efficiency ,0.0
+Maintenance Cost,0.0
+Net Present Value (NPV)/ Present Value,0.0333
+Payment Period,0.0
+Internal Rate of Return,0.0
+Maintenance Interval,0.0
+Approval Date,0.0
+Start & Finish Date,0.0
+P2P Duration,0.0
+Schedule variance,0.0
+Schedule variance,0.0
+Final Assessment Score,0.0
+Cost,0.0
+Cost variance,0.0
+No. of leak,0.0
+No. of rework,0.0
+LSIR,0.0
+IRPA,0.0
+PLL,0.0
+ICAF,0.0
+Impairment frequency,0.0
+Impulse,0.0
+Overpressure,0.0333
+Thermal radiation,0.0
+Lower flammability limit,0.0
+Toxic concentration (ERPG3),0.0
+Pool radius,0.0
+Toxic concentration (IDLH),0.0
+Distance,0.0
+Flowrate,0.0
+Pressure,0.4286
+Pipe size,0.0
+Pressure,0.4286
+Quantity/volume,0.0
+Gas Group/ Apparatus sub-group,0.0
+Temp Class,0.0
+R1,0.0
+R2,0.0
+Grade of Release,0.0
