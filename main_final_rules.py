@@ -3,12 +3,35 @@ import pandas as pd
 import openai
 
 def configure_openai():
+    """
+    Configures the OpenAI API by setting the API type, base URL, version, and key.
+
+    This function sets the `api_type` property of the `openai` module to "azure",
+    indicating that the Azure variant of the OpenAI API should be used. It also
+    sets the `api_base` property to "https://openailx.openai.azure.com/" to specify
+    the base URL for API requests, and the `api_version` property to "2022-12-01" to
+    indicate the version of the API to use. Finally, it sets the `api_key` property
+    to "3be6ba13cc1f4a16bd5293d8feba2036" to provide the authentication key for API
+    requests.
+
+    This function does not take any parameters and does not return any values.
+    """
     openai.api_type = "azure"
     openai.api_base = "https://openailx.openai.azure.com/"
     openai.api_version = "2022-12-01"
     openai.api_key = "3be6ba13cc1f4a16bd5293d8feba2036"
 
 def openai_similarity(word1, word2):
+    """
+    Calculates the semantic similarity score between two words using the OpenAI API.
+
+    Args:
+        word1 (str): The first word to compare.
+        word2 (str): The second word to compare.
+
+    Returns:
+        float: The semantic similarity score between word1 and word2, ranging from 0 to 1.
+    """
     try:
         print(f"word1: {word1}")
         print(f"word2: {word2}")
@@ -18,11 +41,13 @@ def openai_similarity(word1, word2):
             engine='text-davinci-003',
             prompt=prompt,
             max_tokens=50, 
-            temperature=0.2,
+            temperature=0.2, # can adjust freedom/sensitivity
             n=1,
             stop=None,
             logprobs=0
         )
+
+        logprobs = response['choices'][0]['logprobs']
 
         similarity_score_match = re.search(r'(\d+\.\d+)', response.choices[0].text)
 
@@ -41,6 +66,23 @@ def openai_similarity(word1, word2):
         return similarity_score
 
 def remove_duplicates(df, column_name):
+    """
+    Removes duplicates from a dataframe based on a specified column.
+
+    Parameters:
+        df (pandas.DataFrame): The input dataframe.
+        column_name (str): The name of the column to check for duplicates.
+
+    Returns:
+        pandas.DataFrame: A new dataframe with duplicates removed.
+
+    Raises:
+        None
+
+    Example usage:
+        df = pd.DataFrame(...)
+        result = remove_duplicates(df, 'column_name')
+    """
     # check if column exists in dataframe
     # df = pd.DataFrame(df)
     if column_name not in df.columns:
@@ -67,6 +109,7 @@ def preprocess_data(data):
     data["TABLE DESCRIPTION/SUB FOLDER NAME "] = data["TABLE DESCRIPTION/SUB FOLDER NAME "].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True)
 
 def main():
+
     configure_openai()
 
     # load and read csv for both data dictionary and data standard
@@ -78,6 +121,7 @@ def main():
 
     # use remove duplicates
     column_to_check = "FIELD NAME/DATA ATTRIBUTE(S)"
+    # remove duplicate if necessary
     # data1 = remove_duplicates(data1, column_to_check)
     # print(data1)
     print("-----")
@@ -92,25 +136,9 @@ def main():
     # list to store data1 values
     data1_names = data1["FIELD NAME/DATA ATTRIBUTE(S)"].tolist()
 
-    # prepare result dataframe 1 (table_name_vs_data_entity)
-    sheet_df_1 = pd.DataFrame(columns=["DATA ENTITY"])
-    sheet_df_1["DATA ENTITY"] = data2["DATA ENTITY"]
-
-    # prepare result dataframe 2 (table_name_vs_glossary)
-    sheet_df_2 = pd.DataFrame(columns=["BUSINESS DEFINITION/ GLOSSARY"])
-    sheet_df_2["BUSINESS DEFINITION/ GLOSSARY"] = data2["BUSINESS DEFINITION/ GLOSSARY"]
-
-    # prepare result dataframe 3 (table_desc_vs_data_element)
-    sheet_df_3 = pd.DataFrame(columns=["DATA ELEMENT"])
-    sheet_df_3["DATA ELEMENT"] = data2["DATA ELEMENT"]
-
-    # prepare result dataframe 4 (table_desc_vs_glossary)
-    sheet_df_4 = pd.DataFrame(columns=["BUSINESS DEFINITION/ GLOSSARY"])
-    sheet_df_4["BUSINESS DEFINITION/ GLOSSARY"] = data2["BUSINESS DEFINITION/ GLOSSARY"]
-
-    # prepare result dataframe 5 (field_name_vs_data_entity)
-    sheet_df_5 = pd.DataFrame(columns=["DATA ENTITY"])
-    sheet_df_5["DATA ENTITY"] = data2["DATA ENTITY"]
+    # prepare result dataframe 5 (field_name_vs_data_element)
+    sheet_df_5 = pd.DataFrame(columns=["DATA ELEMENT"])
+    sheet_df_5["DATA ELEMENT"] = data2["DATA ELEMENT"]
 
     # prepare result dataframe 6 (field_name_vs_glossary)
     sheet_df_6 = pd.DataFrame(columns=["BUSINESS DEFINITION/ GLOSSARY"])
@@ -133,42 +161,16 @@ def main():
     # loop for applying comparison
     output_path = "results/result_openai_filtervalue_specdomain.xlsx"
     with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
-        for table_name, table_desc, field_name, field_desc, original_name in zip(
-            data1["TABLE NAME"],
-            data1["TABLE DESCRIPTION/SUB FOLDER NAME "],
+        for field_name, field_desc, original_name in zip(
             data1["FIELD NAME/DATA ATTRIBUTE(S)"], 
             data1["FIELD DESCRIPTION"],
             data1_names
             ):
 
-            # Compare 1. table_name_vs_data_entity
-            sheet_name_1 = "table_name_vs_data_entity"
-            sheet_df_1[original_name] = data2["DATA ELEMENT"].apply(
-                lambda data_element: round(openai_similarity(table_name, data_element), 4)
-            )
-
-            # Compare 2. table_name vs data_glossary
-            sheet_name_2 = "table_name_vs_glossary"
-            sheet_df_2[original_name] = data2["BUSINESS DEFINITION/ GLOSSARY"].apply(
-                lambda glossary: round(openai_similarity(table_name, glossary), 4)
-            )
-
-            # Compare 3. table_desc_vs_data_element
-            sheet_name_3 = "table_desc_vs_data_element"
-            sheet_df_3[original_name] = data2["DATA ELEMENT"].apply(
-                lambda data_element: round(openai_similarity(table_desc, data_element), 4)
-            )
-
-            # Compare 4. table_desc_vs_glossary
-            sheet_name_4 = "table_desc_vs_glossary"
-            sheet_df_4[original_name] = data2["BUSINESS DEFINITION/ GLOSSARY"].apply(
-                lambda glossary: round(openai_similarity(table_desc, glossary), 4)
-            )
-
             # Compare 5. field_name_vs_data_entity
             sheet_name_5 = "field_name_vs_data_entity"
-            sheet_df_5[original_name] = data2["DATA ENTITY"].apply(
-                lambda data_entity: round(openai_similarity(field_name, data_entity), 4)
+            sheet_df_5[original_name] = data2["DATA ELEMENT"].apply(
+                lambda data_element: round(openai_similarity(field_name, data_element), 4)
             )
 
             # Compare 6. field_name_vs_glossary
@@ -191,14 +193,9 @@ def main():
 
             # combination of scores (average of all scores)
             sheet_name_9 = "score_combination"
-            sheet_df_9[original_name] = round((sheet_df_3[original_name] + sheet_df_4[original_name] + sheet_df_5[original_name] + sheet_df_6[original_name] + sheet_df_7[original_name] + sheet_df_8[original_name]) / 8, 4)
-
+            sheet_df_9[original_name] = round((sheet_df_5[original_name] + sheet_df_6[original_name] + sheet_df_7[original_name] + sheet_df_8[original_name]) / 4, 4)
 
         # Save the sheets to Excel
-        sheet_df_1.to_excel(writer, sheet_name=sheet_name_1, index=False)
-        sheet_df_2.to_excel(writer, sheet_name=sheet_name_2, index=False)
-        sheet_df_3.to_excel(writer, sheet_name=sheet_name_3, index=False)
-        sheet_df_4.to_excel(writer, sheet_name=sheet_name_4, index=False)
         sheet_df_5.to_excel(writer, sheet_name=sheet_name_5, index=False)
         sheet_df_6.to_excel(writer, sheet_name=sheet_name_6, index=False)
         sheet_df_7.to_excel(writer, sheet_name=sheet_name_7, index=False)
