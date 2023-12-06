@@ -1,6 +1,14 @@
 import re
 import pandas as pd
 import openai
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    filename='log_file.txt', 
+    filemode='w',
+    format='%(asctime)s - %(message)s'
+)
 
 def configure_openai():
     """
@@ -33,21 +41,22 @@ def openai_similarity(word1, word2):
         float: The semantic similarity score between word1 and word2, ranging from 0 to 1.
     """
     try:
-        print(f"word1: {word1}")
-        print(f"word2: {word2}")
-        prompt = f"Provide a precise semantic similarity score (0.xxxx) between '{word1}' and '{word2}'."
+        print(f"word: {word1}")
+        print(f"word: {word2}")
+
+        # prompt = definitions
+        # context = "I am comparing the semantic similarity between a data attribute in a data dictionary and a data element in a data standard."
+        prompt = f"\n. Provide a precise semantic similarity score (0.xxxx) between '{word1}' and '{word2}'."
     
         response = openai.Completion.create(
             engine='text-davinci-003',
             prompt=prompt,
             max_tokens=50, 
-            temperature=0.2, # can adjust freedom/sensitivity
+            temperature=0.2,
             n=1,
             stop=None,
             logprobs=0
         )
-
-        logprobs = response['choices'][0]['logprobs']
 
         similarity_score_match = re.search(r'(\d+\.\d+)', response.choices[0].text)
 
@@ -61,11 +70,14 @@ def openai_similarity(word1, word2):
         return similarity_score
 
     except Exception as e:
+
         similarity_score = 0
         print(f"Exception in comparing '{word1}' with '{word2}': {str(e)}")
+
         return similarity_score
 
 def remove_duplicates(df, column_name):
+
     """
     Removes duplicates from a dataframe based on a specified column.
 
@@ -83,6 +95,7 @@ def remove_duplicates(df, column_name):
         df = pd.DataFrame(...)
         result = remove_duplicates(df, 'column_name')
     """
+
     # check if column exists in dataframe
     # df = pd.DataFrame(df)
     if column_name not in df.columns:
@@ -91,10 +104,6 @@ def remove_duplicates(df, column_name):
     
     # drop all occurence of duplciates in the specified column
     df_unique = df.drop_duplicates(subset = column_name, keep = True)
-
-    # print the rows that are being removed
-    # removed_rows = df[df.duplicated(subset=column_name, keep=False)]
-    # print(f"Removed rows: \n{removed_rows}\n")
 
     # reset index of new dataframe
     df_unique = df_unique.reset_index(drop=True)
@@ -108,6 +117,13 @@ def preprocess_data(data):
     data["TABLE NAME"] = data["TABLE NAME"].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True)
     data["TABLE DESCRIPTION/SUB FOLDER NAME "] = data["TABLE DESCRIPTION/SUB FOLDER NAME "].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True)
 
+definitions = (
+    "Data Attribute - It is at the lowest level of data taxonomy in a data dictionary and received from clients/businesses.\n"
+    "Data Dictionary - It is a collection of data attributes.\n"
+    "Data Element - It is at the lowest level of data taxonomy in a data standard and .\n"
+    "Data Standard - It is a collection of data elements that is used by analyst.\n"
+)
+
 def main():
 
     configure_openai()
@@ -120,13 +136,12 @@ def main():
     data2 = pd.read_csv(data2_path)
 
     # use remove duplicates
-    column_to_check = "FIELD NAME/DATA ATTRIBUTE(S)"
+    # column_to_check = "FIELD NAME/DATA ATTRIBUTE(S)"
     # remove duplicate if necessary
     # data1 = remove_duplicates(data1, column_to_check)
-    # print(data1)
-    print("-----")
+    
     # filter out relevant values for data dictionary
-    filter_data1 = [ "MI_EQUIP000_CAT_PROF_C", "CC_EQUIP000_TUBE_MX_IN_PRES_N", "CC_EQUIP000_TUBE_MX_OUT_PRES_N", "CC_EQUIP000_TUBE_OPR_IN_PRES_N", "CC_EQUIP000_TUBE_OPR_OU_PRES_N"]
+    filter_data1 = [ "MI_EQUIP000_CAT_PROF_C"]
     data1 = data1.drop_duplicates(subset="FIELD NAME/DATA ATTRIBUTE(S)").loc[data1["FIELD NAME/DATA ATTRIBUTE(S)"].isin(filter_data1)]
 
     # filter out relevant data domain for data standard
@@ -136,24 +151,20 @@ def main():
     # list to store data1 values
     data1_names = data1["FIELD NAME/DATA ATTRIBUTE(S)"].tolist()
 
-    # prepare result dataframe 5 (field_name_vs_data_element)
-    sheet_df_5 = pd.DataFrame(columns=["DATA ELEMENT"])
-    sheet_df_5["DATA ELEMENT"] = data2["DATA ELEMENT"]
-
-    # prepare result dataframe 6 (field_name_vs_glossary)
-    sheet_df_6 = pd.DataFrame(columns=["BUSINESS DEFINITION/ GLOSSARY"])
-    sheet_df_6["BUSINESS DEFINITION/ GLOSSARY"] = data2["BUSINESS DEFINITION/ GLOSSARY"]
-
     # prepare result dataframe 7 (field_desc_vs_data_element)
-    sheet_df_7 = pd.DataFrame(columns=["DATA ELEMENT"])
-    sheet_df_7["DATA ELEMENT"] = data2["DATA ELEMENT"]
+    sheet_df_1 = pd.DataFrame(columns=["DATA ELEMENT"])
+    sheet_df_1["DATA ELEMENT"] = data2["DATA ELEMENT"]
 
     # prepare result dataframe 8 (field_desc_vs_glossary)
-    sheet_df_8 = pd.DataFrame(columns=["BUSINESS DEFINITION/ GLOSSARY"])
-    sheet_df_8["BUSINESS DEFINITION/ GLOSSARY"] = data2["BUSINESS DEFINITION/ GLOSSARY"]
+    sheet_df_2 = pd.DataFrame(columns=["BUSINESS DEFINITION/ GLOSSARY"])
+    sheet_df_2["BUSINESS DEFINITION/ GLOSSARY"] = data2["BUSINESS DEFINITION/ GLOSSARY"]
+    
+    # Create a combination score sheet
+    sheet_df_comb = pd.DataFrame(columns=["DATA ELEMENT"])
+    sheet_df_comb["DATA ELEMENT"] = data2["DATA ELEMENT"]
 
-    sheet_df_9 = pd.DataFrame(columns=["DATA ELEMENT"])
-    sheet_df_9["DATA ELEMENT"] = data2["DATA ELEMENT"]
+    # Create a summary sheet
+    summary_sheet = pd.DataFrame(columns=["DATA ATTRIBUTE", "Top Match 1", "Score 1", "Glossary 1", "Entity 1", "Top Match 2", "Score 2", "Glossary 2", "Entity 2", "Top Match 3", "Score 3", "Glossary 3", "Entity 3"])
 
     # preprocess data dictionary
     preprocess_data(data1)
@@ -161,46 +172,60 @@ def main():
     # loop for applying comparison
     output_path = "results/result_openai_filtervalue_specdomain.xlsx"
     with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
-        for field_name, field_desc, original_name in zip(
-            data1["FIELD NAME/DATA ATTRIBUTE(S)"], 
+        for field_desc, original_name in zip(
             data1["FIELD DESCRIPTION"],
             data1_names
             ):
 
-            # Compare 5. field_name_vs_data_entity
-            sheet_name_5 = "field_name_vs_data_entity"
-            sheet_df_5[original_name] = data2["DATA ELEMENT"].apply(
-                lambda data_element: round(openai_similarity(field_name, data_element), 4)
-            )
-
-            # Compare 6. field_name_vs_glossary
-            sheet_name_6 = "field_name_vs_glossary"
-            sheet_df_6[original_name] = data2["BUSINESS DEFINITION/ GLOSSARY"].apply(
-                lambda glossary: round(openai_similarity(field_name, glossary), 4)
-            )
-
-            # Compare 7. field_desc_vs_data_element
-            sheet_name_7 = "field_desc_vs_data_element"
-            sheet_df_7[original_name] = data2["DATA ELEMENT"].apply(
+            # Compare field_desc_vs_data_element
+            sheet_name_1 = "field_desc_vs_data_element"
+            sheet_df_1[original_name] = data2["DATA ELEMENT"].apply(
                 lambda data_element: round(openai_similarity(field_desc, data_element), 4)
             )
 
-            # Compare 8. field_desc_vs_glossary
-            sheet_name_8 = "field_desc_vs_glossary"
-            sheet_df_8[original_name] = data2["BUSINESS DEFINITION/ GLOSSARY"].apply(
+            # Compare field_desc_vs_glossary
+            sheet_name_2 = "field_desc_vs_glossary"
+            sheet_df_2[original_name] = data2["BUSINESS DEFINITION/ GLOSSARY"].apply(
                 lambda glossary: round(openai_similarity(field_desc, glossary), 4)
             )
 
             # combination of scores (average of all scores)
-            sheet_name_9 = "score_combination"
-            sheet_df_9[original_name] = round((sheet_df_5[original_name] + sheet_df_6[original_name] + sheet_df_7[original_name] + sheet_df_8[original_name]) / 4, 4)
+            sheet_name_comb = "score_combination"
+            sheet_df_comb[original_name] = round((sheet_df_1[original_name] + sheet_df_2[original_name]) / 2, 4)
+            
+            # find top 3 data elements with the highest score
+            top_matches = sheet_df_comb[original_name].nlargest(3).index.tolist()
+            top_scores = sheet_df_comb[original_name].nlargest(3).tolist()
+
+            # Get corresponding glossary and data entity values
+            top_glossary_values = data2.loc[top_matches, "BUSINESS DEFINITION/ GLOSSARY"].tolist()
+            top_data_entity_values = data2.loc[top_matches, "DATA ELEMENT"].tolist()
+
+            # Create a summary sheet
+            sheet_name_summary = "summary"
+            summary_df = pd.DataFrame({
+                "DATA ATTRIBUTE": original_name,
+                "Top Match 1": data2.loc[top_matches[0], "DATA ELEMENT"],
+                "Score 1": top_scores[0],
+                "Glossary 1": top_glossary_values[0],
+                "Entity 1": top_data_entity_values[0],
+                "Top Match 2": data2.loc[top_matches[1], "DATA ELEMENT"],
+                "Score 2": top_scores[1],
+                "Glossary 2": top_glossary_values[1],
+                "Entity 2": top_data_entity_values[1],
+                "Top Match 3": data2.loc[top_matches[2], "DATA ELEMENT"],
+                "Score 3": top_scores[2],
+                "Glossary 3": top_glossary_values[2],
+                "Entity 3": top_data_entity_values[2],
+            }, index=[0])
+
+        summary_sheet = pd.concat([summary_sheet, summary_df], ignore_index=True)
 
         # Save the sheets to Excel
-        sheet_df_5.to_excel(writer, sheet_name=sheet_name_5, index=False)
-        sheet_df_6.to_excel(writer, sheet_name=sheet_name_6, index=False)
-        sheet_df_7.to_excel(writer, sheet_name=sheet_name_7, index=False)
-        sheet_df_8.to_excel(writer, sheet_name=sheet_name_8, index=False)
-        sheet_df_9.to_excel(writer, sheet_name=sheet_name_9, index=False)
+        sheet_df_1.to_excel(writer, sheet_name=sheet_name_1, index=False)
+        sheet_df_2.to_excel(writer, sheet_name=sheet_name_2, index=False)
+        sheet_df_comb.to_excel(writer, sheet_name=sheet_name_comb, index=False)
+        summary_sheet.to_excel(writer, sheet_name=sheet_name_summary, index=False)
 
 if __name__ == "__main__":
     main()
