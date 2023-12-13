@@ -1,43 +1,72 @@
-import pandas as pd
-from collections import Counter
-import math
-import pickle
-from models import LanguageNgramModel, MissingLetterModel
-from abbreviation_spellchecker import noisy_channel
-from gensim.models import Word2Vec
-import spacy
-import openai
 import re
+import pandas as pd
+import openai
+import logging
 
-openai.api_type = "azure"
-openai.api_base = "https://openailx.openai.azure.com/"
-openai.api_version = "2022-12-01"
-openai.api_key = "3be6ba13cc1f4a16bd5293d8feba2036"
+logging.basicConfig(
+    level=logging.INFO,
+    filename='log_file.txt', 
+    filemode='w',
+    format='%(asctime)s - %(message)s'
+)
 
-# methodology for string comparison
-# open ai
+def configure_openai():
+    """
+    Configures the OpenAI API by setting the API type, base URL, version, and key.
+
+    This function sets the `api_type` property of the `openai` module to "azure",
+    indicating that the Azure variant of the OpenAI API should be used. It also
+    sets the `api_base` property to "https://openailx.openai.azure.com/" to specify
+    the base URL for API requests, and the `api_version` property to "2022-12-01" to
+    indicate the version of the API to use. Finally, it sets the `api_key` property
+    to "3be6ba13cc1f4a16bd5293d8feba2036" to provide the authentication key for API
+    requests.
+
+    This function does not take any parameters and does not return any values.
+    """
+    openai.api_type = "azure"
+    openai.api_base = "https://openailx.openai.azure.com/"
+    openai.api_version = "2022-12-01"
+    openai.api_key = "3be6ba13cc1f4a16bd5293d8feba2036"
+
 def openai_similarity(word1, word2):
-    # openai
+    """
+    Calculates the semantic similarity score between two words using the OpenAI API.
+
+    Args:
+        word1 (str): The first word to compare.
+        word2 (str): The second word to compare.
+
+    Returns:
+        float: The semantic similarity score between word1 and word2, ranging from 0 to 1.
+    """
     try:
-        print("word1: " + word1)
-        print("word2: " + word2)
-        # Construct a prompt for the specific input-reference pair
-        prompt = f"Provide a precise semantic similarity score (0.xxxx) between '{word1}' and '{word2}'."
+        print(f"word: {word1}")
+        print(f"word: {word2}")
+
+        """
+        definitions = (
+            "Data Attribute - It is at the lowest level of data taxonomy in a data dictionary and received from clients/businesses.\n"
+            "Data Dictionary - It is a collection of data attributes.\n"
+            "Data Element - It is at the lowest level of data taxonomy in a data standard and .\n"
+            "Data Standard - It is a collection of data elements that is used by analyst.\n"
+        )
+        """
+
+        # prompt = definitions
+        context = "I am comparing the semantic similarity between a data attribute in a data dictionary and a data element in a data standard. "
+        prompt = f"{context}\nProvide a precise semantic similarity score (0.xxxx) between data attribute: '{word1}' and data element: '{word2}'. Justify the score in less than 30 words."
     
-        # Call OpenAI API for this specific input-reference pair
         response = openai.Completion.create(
             engine='text-davinci-003',
             prompt=prompt,
-            max_tokens=40, 
-            temperature=0.2,
+            max_tokens=50, 
+            temperature=0,
             n=1,
             stop=None,
             logprobs=0
         )
 
-        # print(response)
-
-        # Extract the similarity score using a regular expression
         similarity_score_match = re.search(r'(\d+\.\d+)', response.choices[0].text)
 
         if similarity_score_match:
@@ -46,267 +75,165 @@ def openai_similarity(word1, word2):
         else:
             similarity_score = 0
             raise ValueError("No numeric similarity score found in the response.")
-        return similarity_score
         
+        return similarity_score
 
     except Exception as e:
+
         similarity_score = 0
         print(f"Exception in comparing '{word1}' with '{word2}': {str(e)}")
+
         return similarity_score
 
-# spaCy model
-# nlp = spacy.load("en_core_web_lg")
-nlp = "" # dummy
+def remove_duplicates(df, column_name):
 
-def semantic_similarity(text1, text2):
-    doc1 = nlp(text1)
-    doc2 = nlp(text2)
-    return doc1.similarity(doc2)
-
-# jaccard similarity
-def jaccard_similarity(word1, word2):
-    set1 = set(word1)
-    set2 = set(word2)
-
-    # intersection of letters
-    intersection = len(set1 & set2)
-
-    # union of letters
-    union = len(set1 | set2)
-    result = intersection / union
-    return result 
-
-# cosine similarity
-
-def letter_frequency_vector(word):
-    # count freq of each letter in word
-    letter_counts = Counter(word)
-
-    # create vector rep of word based on letter freq
-    vector = [letter_counts.get(letter, 0) for letter in 'abcdefghijklmnopqrstuvwxyz']
-
-    return vector
-
-
-def cosine_similarity(vector1, vector2):
-    dot_product = sum(x * y for x, y in zip(vector1, vector2))
-    magnitude1 = math.sqrt(sum(x**2 for x in vector1))
-    magnitude2 = math.sqrt(sum(y**2 for y in vector2))
-    
-    if magnitude1 == 0 or magnitude2 == 0:
-        return 0
-    
-    return dot_product / (magnitude1 * magnitude2)
-
-
-def train_and_compute_similarity(corpus_file, word1, word2, vector_size=100, window=5, min_count=1, sg=0):
-    
     """
-    Train a Word2Vec model on a given corpus file and compute similarity between two words.
+    Removes duplicates from a dataframe based on a specified column.
 
     Parameters:
-    - corpus_file (str): Path to the corpus file.
-    - word1 (str): First word for similarity calculation.
-    - word2 (str): Second word for similarity calculation.
-    - vector_size (int): Dimensionality of the word vectors.
-    - window (int): Maximum distance between the current and predicted word within a sentence.
-    - min_count (int): Ignores all words with a total frequency lower than this.
-    - sg (int): Training algorithm: 0 for CBOW, 1 for Skip-gram.
+        df (pandas.DataFrame): The input dataframe.
+        column_name (str): The name of the column to check for duplicates.
 
     Returns:
-    - similarity (float): Similarity between word1 and word2.
+        pandas.DataFrame: A new dataframe with duplicates removed.
+
+    Raises:
+        None
+
+    Example usage:
+        df = pd.DataFrame(...)
+        result = remove_duplicates(df, 'column_name')
     """
-    with open(corpus_file, "r", encoding="utf-8") as file:
-        corpus = file.readlines()
 
-    # Tokenize
-    sentences = [sentence.strip().split() for sentence in corpus]
+    # check if column exists in dataframe
+    # df = pd.DataFrame(df)
+    if column_name not in df.columns:
+        print(f"Column '{column_name}' does not exist in the dataframe")
+        return
+    
+    # drop all occurence of duplciates in the specified column
+    df_unique = df.drop_duplicates(subset = column_name, keep = True)
 
-    # Train Word2Vec model
-    model = Word2Vec(sentences, vector_size=vector_size, window=window, min_count=min_count, sg=sg)
+    # reset index of new dataframe
+    df_unique = df_unique.reset_index(drop=True)
 
-    # Compute similarity
-    similarity = model.wv.similarity(word1.lower(), word2.lower())
+    return df_unique
 
-    return similarity
-
-def load_and_apply_models(input_string, model_path):
-    with open(model_path, 'rb') as model_file:
-        big_lang_model, big_missing_model, _ = pickle.load(model_file)
-
-    result = noisy_channel(input_string, big_lang_model, big_missing_model, max_attempts=1000, optimism=0.9, freedom=3.0, verbose=False)
-    return result, big_lang_model, big_missing_model
+def preprocess_data(data):
+    data["FIELD NAME/DATA ATTRIBUTE(S)"] = data["FIELD NAME/DATA ATTRIBUTE(S)"].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True)
+    data["FIELD DESCRIPTION"] = data["FIELD DESCRIPTION"].str.replace(r'System generated field:', '', case=False, regex=True) # only for field desc
+    data["FIELD DESCRIPTION"] = data["FIELD DESCRIPTION"].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True)
+    data["TABLE NAME"] = data["TABLE NAME"].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True)
+    data["TABLE DESCRIPTION/SUB FOLDER NAME "] = data["TABLE DESCRIPTION/SUB FOLDER NAME "].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True)
 
 def main():
 
-    """
-    receive data document.xlsx, convert to .csv.
-    choose only sheet name "DDS 3.0 Data Dictionary-Source"
-    remove the first and second rows
+    configure_openai()
 
-    """ 
-    # Data Dictionary
+    # load and read csv for both data dictionary and data standard
     data1_path = "data/Data Document PRPC Track2- GE APM Ver.01 - zarif.csv"
-    data1 = pd.read_csv(data1_path).head(5)
-    # Data Standard
+    data1 = pd.read_csv(data1_path)
+
     data2_path = "data/PETRONAS Data Standard - All -  July 2023.csv" 
     data2 = pd.read_csv(data2_path)
 
-    # filter out data domain
-    domains = data1["DATA DOMAIN "].iloc[0]
-    data2 = data2[data2["DATA DOMAIN"].isin([domains])].reset_index(drop=True).head(5)
+    # use remove duplicates
+    # column_to_check = "FIELD NAME/DATA ATTRIBUTE(S)"
+    # remove duplicate if necessary
+    # data1 = remove_duplicates(data1, column_to_check)
+    
+    # filter out relevant values for data dictionary
+    # only test out one field
+    filter_data1 = [ "MI_EQUIP000_CAT_PROF_C"]
+    data1 = data1.drop_duplicates(subset="FIELD NAME/DATA ATTRIBUTE(S)").loc[data1["FIELD NAME/DATA ATTRIBUTE(S)"].isin(filter_data1)]
 
-    # column names of data dictionary for result df
+    """# filter data dictionary to only have attributes that have 'yes' as CDE
+    data1 = data1[data1["CRITICAL DATA ELEMENT (CDE)"] == "Yes"].head(10).reset_index()
+    print(data1["FIELD DESCRIPTION"])"""
+
+    # filter out relevant data domain for data standard
+    # only use relevant data domain
+    filter_data2 = data1["DATA DOMAIN "].iloc[0]
+    data2 = data2[data2["DATA DOMAIN"].isin([filter_data2])].reset_index(drop=True)
+
+    # list to store data1 values
     data1_names = data1["FIELD NAME/DATA ATTRIBUTE(S)"].tolist()
 
-    # Prepare result_df 
-    result_df = pd.DataFrame(columns=["DATA ELEMENT"])
-    result_df["DATA ELEMENT"] = data2["DATA ELEMENT"]
+    # prepare result dataframe 1 (field_desc_vs_data_element)
+    sheet_df_1 = pd.DataFrame(columns=["DATA ELEMENT"])
+    sheet_df_1["DATA ELEMENT"] = data2["DATA ELEMENT"]
 
-    # Preprocess data with regex
-    data1["FIELD NAME/DATA ATTRIBUTE(S)"] = data1["FIELD NAME/DATA ATTRIBUTE(S)"].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True)
-    # Remove "System generated field:" from "FIELD DESCRIPTION"
-    data1["FIELD DESCRIPTION"] = data1["FIELD DESCRIPTION"].str.replace(r'System generated field:', '', case=False, regex=True)
-    data1["FIELD DESCRIPTION"] = data1["FIELD DESCRIPTION"].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True) # "System generated field:" is present in all rows, should remove
-    data1["TABLE NAME"] = data1["TABLE NAME"].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True)
-    data1["TABLE DESCRIPTION/SUB FOLDER NAME "] = data1["TABLE DESCRIPTION/SUB FOLDER NAME "].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True)
-    data2["DATA ELEMENT"] = data2["DATA ELEMENT"].str.lower().str.replace(r'[^a-zA-Z\s]', '', regex=True)
+    # prepare result dataframe 2 (field_desc_vs_glossary)
+    sheet_df_2 = pd.DataFrame(columns=["BUSINESS DEFINITION/ GLOSSARY"])
+    sheet_df_2["BUSINESS DEFINITION/ GLOSSARY"] = data2["BUSINESS DEFINITION/ GLOSSARY"]
+    
+    # Create a combination score sheet
+    sheet_df_comb = pd.DataFrame(columns=["DATA ELEMENT"])
+    sheet_df_comb["DATA ELEMENT"] = data2["DATA ELEMENT"]
 
-    # load and apply abbreviation spellchecker to all data dictionary data attributes
-    """
-    for i, data1_name in enumerate(data1_names):
-        # choose each value from data
-        word1 = data1["FIELD NAME/DATA ATTRIBUTE(S)"].iloc[i]
+    # Create a summary sheet
+    summary_sheet = pd.DataFrame(columns=["DATA ATTRIBUTE", "Data Element 1", "Score 1", "Glossary 1", "Entity 1", "Data Element 2", "Score 2", "Glossary 2", "Entity 2", "Data Element 3", "Score 3", "Glossary 3", "Entity 3"])
 
-        # load and apply models to each value
-        result, _, _ = load_and_apply_models(word1.lower(), model_path="abbreviation_spellchecker.pkl")
+    # preprocess data dictionary
+    preprocess_data(data1)
 
-        # replace original value with result
-        data1.at[i, "FIELD NAME/DATA ATTRIBUTE(S)"] = result
+    # loop for applying comparison
+    output_path = "results/result_openai_filtervalue_specdomain.xlsx"
+    with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
+        for field_desc, original_name in zip(
+            data1["FIELD DESCRIPTION"],
+            data1_names
+            ):
 
-    """
-
-    corpus_file = "corpus\Corpus.txt"
-
-    # iterate to apply cosine similarity model
-    for field_name, field_description, table_name, table_description, data_element, original_name in zip(
-            data1["FIELD NAME/DATA ATTRIBUTE(S)"], data1["FIELD DESCRIPTION"], data1["TABLE NAME"], data1["TABLE DESCRIPTION/SUB FOLDER NAME "], data2["DATA ELEMENT"], data1_names
-        ):
-        """
-        # Calculate cosine similarity scores for each combination
-        score1 = data2["DATA ELEMENT"].apply(
-            lambda data_element: round(
-                cosine_similarity(
-                    letter_frequency_vector(str(table_name)),
-                    letter_frequency_vector(str(data_element))
-                ),
-                4,
+            # Compare field_desc_vs_data_element
+            sheet_name_1 = "field_desc_vs_data_element"
+            sheet_df_1[original_name] = data2["DATA ELEMENT"].apply(
+                lambda data_element: round(openai_similarity(field_desc, data_element), 4)
             )
-        )
-        score2 = data2["DATA ELEMENT"].apply(
-            lambda data_element: round(
-                cosine_similarity(
-                    letter_frequency_vector(str(table_description)),
-                    letter_frequency_vector(str(data_element))
-                ),
-                4,
-            )
-        )
-        score3 = data2["DATA ELEMENT"].apply(
-            lambda data_element: round(
-                cosine_similarity(
-                    letter_frequency_vector(str(field_name)),
-                    letter_frequency_vector(str(data_element))
-                ),
-                4,
-            )
-        )
-        score4 = data2["DATA ELEMENT"].apply(
-            lambda data_element: round(
-                cosine_similarity(
-                    letter_frequency_vector(str(field_description)),
-                    letter_frequency_vector(str(data_element))
-                ),
-                4,
-            )
-        )
-        score5 = data2["DATA ELEMENT"].apply(
-            lambda data_element: round(
-                cosine_similarity(
-                    letter_frequency_vector(str(table_name) + str(table_description)),
-                    letter_frequency_vector(str(data_element))
-                ),
-                4,
-            )
-        )
-        # Calculate the average score for each combination
-        result_df[original_name] = (score1 + score2 + score3 + score4 + score5) / 5
-        """
-        # spacy
-        """
-        result_df[original_name] = data2["DATA ELEMENT"].apply(
-            lambda data_element: round(
-                semantic_similarity(
-                    field_description, 
-                    data_element
-                ), 
-                4
-            )
-        )
-        """
 
-        # jaccard sim
-        """
-        result_df[original_name] = data2["DATA ELEMENT"].apply(
-            lambda data_element: round(
-                jaccard_similarity(
-                    field_description, 
-                    data_element
-                ), 
-                4
+            # Compare field_desc_vs_glossary
+            sheet_name_2 = "field_desc_vs_glossary"
+            sheet_df_2[original_name] = data2["BUSINESS DEFINITION/ GLOSSARY"].apply(
+                lambda glossary: round(openai_similarity(field_desc, glossary), 4)
             )
-        )
-        """
-        """
-        # syntax cosine sim
-        result_df[original_name] = data2["DATA ELEMENT"].apply(
-            lambda data_element: round(
-                cosine_similarity(
-                    letter_frequency_vector(field_description), 
-                    letter_frequency_vector(data_element)
-                ), 
-                4,
-            )
-        )
-        """
 
-        """
-        # semantic cosine sim
-        result_df[original_name] = data2["DATA ELEMENT"].apply(
-            lambda data_element: round(
-                train_and_compute_similarity(
-                    corpus_file, 
-                    field_description, 
-                    data_element
-                ), 
-                4
-            )
-        )
-        """
+            # combination of scores (average of all scores)
+            sheet_name_comb = "score_combination"
+            sheet_df_comb[original_name] = round((sheet_df_1[original_name] + sheet_df_2[original_name]) / 2, 4)
+            
+            # find top 3 data elements with the highest score
+            top_matches = sheet_df_comb[original_name].nlargest(3).index.tolist()
+            top_scores = sheet_df_comb[original_name].nlargest(3).tolist()
 
-        # openai sim
-        result_df[original_name] = data2["DATA ELEMENT"].apply(
-            lambda data_element: round(
-                openai_similarity(
-                    field_description,
-                    data_element
-                ),
-                4
-            )
-        )
+            # Get corresponding glossary and data entity values
+            # top_glossary_values = data2.loc[top_matches, "BUSINESS DEFINITION/ GLOSSARY"].tolist()
+            # top_data_entity_values = data2.loc[top_matches, "DATA ELEMENT"].tolist()
 
-    output_path = "results/result_openai_complete_domain.csv"
-    result_df.to_csv(output_path, encoding="utf-8", index=False)
+            # Create a summary sheet
+            sheet_name_summary = "summary"
+            summary_df = pd.DataFrame({
+                "DATA ATTRIBUTE": original_name,
+                "Data Element 1": data2.loc[top_matches[0], "DATA ELEMENT"],
+                "Score 1": top_scores[0],
+                # "Glossary 1": top_glossary_values[0],
+                # "Entity 1": top_data_entity_values[0],
+                "Data Element 2": data2.loc[top_matches[1], "DATA ELEMENT"],
+                "Score 2": top_scores[1],
+                # "Glossary 2": top_glossary_values[1],
+                # "Entity 2": top_data_entity_values[1],
+                "Data Element 3": data2.loc[top_matches[2], "DATA ELEMENT"],
+                "Score 3": top_scores[2],
+                # "Glossary 3": top_glossary_values[2],
+                # "Entity 3": top_data_entity_values[2],
+            }, index=[0])
+
+        summary_sheet = pd.concat([summary_sheet.dropna(), summary_df.dropna()], ignore_index=True)
+
+        # Save the sheets to Excel
+        sheet_df_1.to_excel(writer, sheet_name=sheet_name_1, index=False)
+        sheet_df_2.to_excel(writer, sheet_name=sheet_name_2, index=False)
+        sheet_df_comb.to_excel(writer, sheet_name=sheet_name_comb, index=False)
+        summary_sheet.to_excel(writer, sheet_name=sheet_name_summary, index=False)
 
 if __name__ == "__main__":
     main()

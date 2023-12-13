@@ -1,0 +1,28 @@
+testing for temperature/freedom 
+	temperature influences randomness of output
+	deterministic/focused vs randomness/diversity
+---
+very low temperature, very low freedom (0.0)
+	iteration 1: 	score combination = 0.9166
+	iteration 2: 	score combination = 0.8213
+	iteration 3: 	score combination = 0.7063
+
+low temperature (0.2)
+	iteration 1:	score combination = 0.8572
+	iteration 2:	score combination = 0.8166
+	iteration 3: 	score combination = 0.7667
+
+medium temperature (0.5)
+	iteration 1: 	score combination = 0.7333
+	iteration 2: 	score combination = 0.7728
+	iteration 3: 	score combination = 0.7883
+
+high temperature, high randomness (0.8)
+	iteration 1:	score combination = 0.7728
+	iteration 2: 	score combination = 0.7500
+	iteration 3: 	score combination = 0.8666
+
+very high temperature, very high freedom (1.0)
+	iteration 1: 	score combination = 0.9281
+	iteration 2: 	score combination = 0.6818
+	iteration 3: 	score combiantion = 0.7222

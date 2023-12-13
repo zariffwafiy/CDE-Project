@@ -1,0 +1,5 @@
+remove low-score combination to increase overall score
+
+retained combination: 
+	field description vs data element 
+	field description vs business definition/glossary

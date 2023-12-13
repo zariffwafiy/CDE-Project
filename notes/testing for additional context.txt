@@ -1,0 +1,25 @@
+testing for additional context
+
+---
+context 1
+I am comparing the semantic similarity between a data attribute in a data dictionary and a data element in a data standard
+iteration 1: score = 0.95
+iteration 2: score = 0.95
+iteration 3: score = 0.95
+
+context 2
+added definition:
+definitions = (
+    "Data Attribute - It is at the lowest level of data taxonomy in a data dictionary and received from clients/businesses.\n"
+    "Data Dictionary - It is a collection of data attributes.\n"
+    "Data Element - It is at the lowest level of data taxonomy in a data standard and .\n"
+    "Data Standard - It is a collection of data elements that is used by analyst.\n"
+)
+iteration 1: score = 0.9166
+iteration 2: score = 0.9166
+iteration 3: score = 0.9166
+
+
+	
+
+

@@ -1,0 +1,17 @@
+unique elements in CSV: 782
+unique elements in Excel: 250
+Total unique matches: 215
+
+Description		Value
+Total exact matches	85
+Total semantic matches	118
+Total wildcard matches 	46
+
+Description			Value
+Unique data element in Excel	250
+Unique matching 		215
+Sensitivity			215/250 * 100 = 86.00%
+
+---
+
+

@@ -1,0 +1,6 @@
+feedback loop
+	teaching algorithm 
+	back propagation
+
+process engineering 
+	test out different domain
