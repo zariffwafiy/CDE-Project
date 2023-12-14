@@ -3,6 +3,7 @@ import pandas as pd
 import openai
 import logging
 from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
 # set up logging
@@ -139,121 +140,109 @@ def preprocess_data(data):
     data["TABLE NAME"] = data["TABLE NAME"].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True)
     data["TABLE DESCRIPTION/SUB FOLDER NAME "] = data["TABLE DESCRIPTION/SUB FOLDER NAME "].str.lower().str.replace(r'[^a-zA-Z\s]', ' ', regex=True)
 
-def main():
+def process_word_pair(word1, data2, sheet_df_1, sheet_df_2, sheet_df_comb, summary_sheet):
+    configure_openai()
+    
+    original_name = word1
+    
+    # Compare field_desc_vs_data_element
+    sheet_df_1[original_name] = data2["DATA ELEMENT"].apply(
+        lambda data_element: round(openai_similarity(word1, data_element), 4)
+    )
 
+    # Compare field_desc_vs_glossary
+    sheet_df_2[original_name] = data2["BUSINESS DEFINITION/ GLOSSARY"].apply(
+        lambda glossary: round(openai_similarity(word1, glossary), 4)
+    )
+
+    # combination of scores (average of all scores)
+    sheet_df_comb[original_name] = round((sheet_df_1[original_name] + sheet_df_2[original_name]) / 2, 4)
+
+    # find top 3 data elements with the highest score
+    top_matches = sheet_df_comb[original_name].nlargest(3).index.tolist()
+    top_scores = sheet_df_comb[original_name].nlargest(3).tolist()
+
+    # Create a summary sheet
+    summary_df = pd.DataFrame({
+        "DATA ATTRIBUTE": original_name,
+        "Data Element 1": data2.loc[top_matches[0], "DATA ELEMENT"],
+        "Score 1": top_scores[0],
+        "Data Element 2": data2.loc[top_matches[1], "DATA ELEMENT"],
+        "Score 2": top_scores[1],
+        "Data Element 3": data2.loc[top_matches[2], "DATA ELEMENT"],
+        "Score 3": top_scores[2],
+    }, index=[0])
+
+    summary_sheet = pd.concat([summary_sheet.dropna(), summary_df.dropna()], ignore_index=True)
+
+    return sheet_df_1, sheet_df_2, sheet_df_comb, summary_sheet
+
+def process_batch(batch_names, data2, sheet_df_1, sheet_df_2, sheet_df_comb, summary_sheet):
+    configure_openai()
+    
+    with ProcessPoolExecutor() as executor:
+        futures = [executor.submit(process_word_pair, word1, data2, sheet_df_1, sheet_df_2, sheet_df_comb, summary_sheet) for word1 in batch_names]
+    
+    # Combine results
+    for future in futures:
+        result = future.result()
+        sheet_df_1, sheet_df_2, sheet_df_comb, summary_sheet = result
+
+    return sheet_df_1, sheet_df_2, sheet_df_comb, summary_sheet
+
+def main():
     configure_openai()
 
-    # load and read csv for both data dictionary and data standard
+    # Load and read csv for both data dictionary and data standard
     data1_path = "data/Data Document PRPC Track2- GE APM Ver.01 - zarif.csv"
     data1 = pd.read_csv(data1_path)
 
-    data2_path = "data/PETRONAS Data Standard - All -  July 2023.csv" 
+    data2_path = "data/PETRONAS Data Standard - All -  July 2023.csv"
     data2 = pd.read_csv(data2_path)
 
-    # use remove duplicates
-    # column_to_check = "FIELD NAME/DATA ATTRIBUTE(S)"
-    # remove duplicate if necessary
-    # data1 = remove_duplicates(data1, column_to_check)
-    
-    # filter out relevant values for data dictionary
-    # only test out one field
-    # filter_data1 = [ "MI_EQUIP000_CAT_PROF_C"]
-    # data1 = data1.drop_duplicates(subset="FIELD NAME/DATA ATTRIBUTE(S)").loc[data1["FIELD NAME/DATA ATTRIBUTE(S)"].isin(filter_data1)]
-
-    # List of strings to exclude
     strings_to_exclude = ['key', 'description', 'date', 'status', 'code', 'ID', 'System', 'Number', 'Label', 'Caption', 'NaN']
-
-    # Combine strings into a regular expression pattern
     exclude_pattern = '|'.join(map(re.escape, strings_to_exclude))
 
-    # Filter data dictionary
     data1 = data1[data1["CRITICAL DATA ELEMENT (CDE)"] == "Yes"]
-    data1 = data1[~(data1["FIELD DESCRIPTION"].str.contains(exclude_pattern, case=False, na=False) | data1["FIELD DESCRIPTION"].isna())].reset_index()
-    print(data1["FIELD DESCRIPTION"])
+    data1 = data1[~(data1["FIELD DESCRIPTION"].str.contains(exclude_pattern, case=False, na=False) | data1["FIELD DESCRIPTION"].isna())].reset_index().head(10)
 
-    # filter out relevant data domain for data standard
-    # only use relevant data domain
     filter_data2 = data1["DATA DOMAIN "].iloc[0]
     data2 = data2[data2["DATA DOMAIN"].isin([filter_data2])].reset_index(drop=True)
 
-    # list to store data1 values
     data1_names = data1["FIELD NAME/DATA ATTRIBUTE(S)"].tolist()
 
-    # prepare result dataframe 1 (field_desc_vs_data_element)
     sheet_df_1 = pd.DataFrame(columns=["DATA ELEMENT"])
     sheet_df_1["DATA ELEMENT"] = data2["DATA ELEMENT"]
 
-    # prepare result dataframe 2 (field_desc_vs_glossary)
     sheet_df_2 = pd.DataFrame(columns=["BUSINESS DEFINITION/ GLOSSARY"])
     sheet_df_2["BUSINESS DEFINITION/ GLOSSARY"] = data2["BUSINESS DEFINITION/ GLOSSARY"]
-    
-    # Create a combination score sheet
+
     sheet_df_comb = pd.DataFrame(columns=["DATA ELEMENT"])
     sheet_df_comb["DATA ELEMENT"] = data2["DATA ELEMENT"]
 
-    # Create a summary sheet
-    summary_sheet = pd.DataFrame(columns=["DATA ATTRIBUTE", "Data Element 1", "Score 1", "Glossary 1", "Entity 1", "Data Element 2", "Score 2", "Glossary 2", "Entity 2", "Data Element 3", "Score 3", "Glossary 3", "Entity 3"])
+    summary_sheet = pd.DataFrame(columns=["DATA ATTRIBUTE", "Data Element 1", "Score 1", "Data Element 2", "Score 2", "Data Element 3", "Score 3"])
 
-    # preprocess data dictionary
     preprocess_data(data1)
 
-    # loop for applying comparison
+    batch_size = 5
+
     output_path = "results/result_openai_filtervalue_specdomain.xlsx"
-    with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
-        for field_desc, original_name in zip(
-            data1["FIELD DESCRIPTION"],
-            data1_names
-            ):
+    with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer, ProcessPoolExecutor() as executor:
+        for i in range(0, len(data1), batch_size):
+            batch_names = data1["FIELD NAME/DATA ATTRIBUTE(S)"].iloc[i:i + batch_size].tolist()
 
-            # Compare field_desc_vs_data_element
-            sheet_name_1 = "field_desc_vs_data_element"
-            sheet_df_1[original_name] = data2["DATA ELEMENT"].apply(
-                lambda data_element: round(openai_similarity(field_desc, data_element), 4)
-            )
+            # Process batches in parallel
+            results = list(executor.map(process_batch, [batch_names]*len(batch_names), [data2]*len(batch_names), [sheet_df_1]*len(batch_names), [sheet_df_2]*len(batch_names), [sheet_df_comb]*len(batch_names), [summary_sheet]*len(batch_names)))
 
-            # Compare field_desc_vs_glossary
-            sheet_name_2 = "field_desc_vs_glossary"
-            sheet_df_2[original_name] = data2["BUSINESS DEFINITION/ GLOSSARY"].apply(
-                lambda glossary: round(openai_similarity(field_desc, glossary), 4)
-            )
+            # Combine results
+            for result in results:
+                sheet_df_1, sheet_df_2, sheet_df_comb, summary_sheet = result
 
-            # combination of scores (average of all scores)
-            sheet_name_comb = "score_combination"
-            sheet_df_comb[original_name] = round((sheet_df_1[original_name] + sheet_df_2[original_name]) / 2, 4)
-            
-            # find top 3 data elements with the highest score
-            top_matches = sheet_df_comb[original_name].nlargest(3).index.tolist()
-            top_scores = sheet_df_comb[original_name].nlargest(3).tolist()
-
-            # Get corresponding glossary and data entity values
-            # top_glossary_values = data2.loc[top_matches, "BUSINESS DEFINITION/ GLOSSARY"].tolist()
-            # top_data_entity_values = data2.loc[top_matches, "DATA ELEMENT"].tolist()
-
-            # Create a summary sheet
-            sheet_name_summary = "summary"
-            summary_df = pd.DataFrame({
-                "DATA ATTRIBUTE": original_name,
-                "Data Element 1": data2.loc[top_matches[0], "DATA ELEMENT"],
-                "Score 1": top_scores[0],
-                # "Glossary 1": top_glossary_values[0],
-                # "Entity 1": top_data_entity_values[0],
-                "Data Element 2": data2.loc[top_matches[1], "DATA ELEMENT"],
-                "Score 2": top_scores[1],
-                # "Glossary 2": top_glossary_values[1],
-                # "Entity 2": top_data_entity_values[1],
-                "Data Element 3": data2.loc[top_matches[2], "DATA ELEMENT"],
-                "Score 3": top_scores[2],
-                # "Glossary 3": top_glossary_values[2],
-                # "Entity 3": top_data_entity_values[2],
-            }, index=[0])
-
-        summary_sheet = pd.concat([summary_sheet.dropna(), summary_df.dropna()], ignore_index=True)
-
-        # Save the sheets to Excel
-        sheet_df_1.to_excel(writer, sheet_name=sheet_name_1, index=False)
-        sheet_df_2.to_excel(writer, sheet_name=sheet_name_2, index=False)
-        sheet_df_comb.to_excel(writer, sheet_name=sheet_name_comb, index=False)
-        summary_sheet.to_excel(writer, sheet_name=sheet_name_summary, index=False)
+            # Save the sheets to Excel
+            sheet_df_1.to_excel(writer, sheet_name="field_desc_vs_data_element", index=False)
+            sheet_df_2.to_excel(writer, sheet_name="field_desc_vs_glossary", index=False)
+            sheet_df_comb.to_excel(writer, sheet_name="score_combination", index=False)
+            summary_sheet.to_excel(writer, sheet_name="summary", index=False)
 
 if __name__ == "__main__":
     main()

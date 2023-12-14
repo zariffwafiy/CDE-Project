@@ -84,7 +84,7 @@ def openai_similarity(word1, word2):
 
 # example usage
 word1 = "Catalog Profile"
-word2 = "Description"
+word2 = "Equipment's Catalog Profile"
 nomalized_similarity = round((openai_similarity(word1, word2) + 1) / 2, 4)
 logger.info(f"Normalized similarity: {nomalized_similarity}")
 
