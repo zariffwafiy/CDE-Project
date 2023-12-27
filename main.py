@@ -10,22 +10,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # constants
-MAX_TOKENS = 100
+MAX_TOKENS = 50
 TEMPERATURE = 0
 NUM_COMPLETIONS = 1
-
-def construct_prompt(word1, word2):
-    definitions = (
-        "Data Attribute - It is at the lowest level of data taxonomy in a data dictionary and received from clients/businesses.\n"
-        "Data Dictionary - It is a collection of data attributes.\n"
-        "Data Element - It is at the lowest level of data taxonomy in a data standard and .\n"
-        "Data Standard - It is a collection of data elements that is used by analyst.\n"
-    )
-
-    context = "I am comparing the semantic similarity between a data attribute in a data dictionary and a data element in a data standard."
-    prompt = f"{definitions}\n{context}\nProvide a precise semantic similarity score (0.xxxx) between data attribute:'{word1}' and data element:'{word2}'.Justify the score in less than 30 words."
-    
-    return prompt
 
 def configure_openai():
     """
@@ -46,6 +33,19 @@ def configure_openai():
     openai.api_version = "2022-12-01"
     openai.api_key = "3be6ba13cc1f4a16bd5293d8feba2036"
 
+def construct_prompt(word1, word2):
+    definitions = (
+        "Data Attribute - It is at the lowest level of data taxonomy in a data dictionary and received from clients/businesses.\n"
+        "Data Dictionary - It is a collection of data attributes.\n"
+        "Data Element - It is at the lowest level of data taxonomy in a data standard and .\n"
+        "Data Standard - It is a collection of data elements that is used by analyst.\n"
+    )
+
+    context = "I am comparing the semantic similarity between a data attribute in a data dictionary and a data element in a data standard."
+    prompt = f"{definitions}\n{context}\nProvide a precise semantic similarity score (0.xxxx) between data attribute:'{word1}' and data element:'{word2}'.Justify the score in less than 30 words."
+    
+    return prompt
+
 # methodology of string comparison, openai
 def openai_similarity(word1, word2):
     # openai
@@ -57,9 +57,9 @@ def openai_similarity(word1, word2):
         response = openai.Completion.create(
             engine='text-davinci-003',
             prompt=prompt,
-            max_tokens=100,
-            temperature=0,
-            n=1,
+            max_tokens=MAX_TOKENS,
+            temperature=TEMPERATURE,
+            n=NUM_COMPLETIONS,
             stop=None,
             logprobs=0
         )
@@ -160,6 +160,9 @@ def main():
     # filter_data1 = [ "MI_EQUIP000_CAT_PROF_C"]
     # data1 = data1.drop_duplicates(subset="FIELD NAME/DATA ATTRIBUTE(S)").loc[data1["FIELD NAME/DATA ATTRIBUTE(S)"].isin(filter_data1)]
 
+    # preprocess data1
+    preprocess_data(data1)
+
     # List of strings to exclude
     strings_to_exclude = ['key', 'description', 'date', 'status', 'code', 'ID', 'System', 'Number', 'Label', 'Caption', 'NaN']
 
@@ -169,10 +172,12 @@ def main():
     # Filter data dictionary
     data1 = data1[data1["CRITICAL DATA ELEMENT (CDE)"] == "Yes"]
     data1 = data1[~(data1["FIELD DESCRIPTION"].str.contains(exclude_pattern, case=False, na=False) | data1["FIELD DESCRIPTION"].isna())].reset_index()
+    # data1 = data1[data1["FIELD NAME/DATA ATTRIBUTE(S)" == "MI_EQUIP000_CAT_PROF_C"]]
     print(data1["FIELD DESCRIPTION"])
 
-    # filter out relevant data domain for data standard
-    # only use relevant data domain
+    # input field description
+
+    # filter out relevant data domain for data standard & only use relevant data domain
     filter_data2 = data1["DATA DOMAIN "].iloc[0]
     data2 = data2[data2["DATA DOMAIN"].isin([filter_data2])].reset_index(drop=True)
 
@@ -192,10 +197,7 @@ def main():
     sheet_df_comb["DATA ELEMENT"] = data2["DATA ELEMENT"]
 
     # Create a summary sheet
-    summary_sheet = pd.DataFrame(columns=["DATA ATTRIBUTE", "Data Element 1", "Score 1", "Glossary 1", "Entity 1", "Data Element 2", "Score 2", "Glossary 2", "Entity 2", "Data Element 3", "Score 3", "Glossary 3", "Entity 3"])
-
-    # preprocess data dictionary
-    preprocess_data(data1)
+    summary_sheet = pd.DataFrame(columns=["DATA ATTRIBUTE", "Data Element 1", "Score 1",  "Data Element 2", "Score 2", "Data Element 3", "Score 3"])
 
     # loop for applying comparison
     output_path = "results/result_openai_filtervalue_specdomain.xlsx"

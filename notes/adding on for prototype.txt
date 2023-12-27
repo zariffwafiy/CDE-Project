@@ -1,0 +1,8 @@
+adding on for prototype:
+	1. prototype of UI
+	2. retain top 3 matches
+	3. based off justification on data standard glossary 
+
+cd OneDrive - PETRONAS\Documents\Python Files\CDE Advisor streamlit run test_openai.py
+
+{definitions}. \n
