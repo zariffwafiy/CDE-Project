@@ -5,6 +5,13 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import streamlit as st
 import time
+from functools import partial
+import sys
+from io import StringIO
+
+# Redirect stdout to a buffer
+# buffer = StringIO()
+# sys.stdout = buffer
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

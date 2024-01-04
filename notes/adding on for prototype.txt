@@ -6,3 +6,37 @@ adding on for prototype:
 cd OneDrive - PETRONAS\Documents\Python Files\CDE Advisor streamlit run test_openai.py
 
 {definitions}. \n
+
+---
+(Functionality) add button to interrupt and cancel
+(UI) add new line after score
+(UI) show running lines in the web app (to show the program is running)
+(UI, note) show note of estimated running time for each domain 
+(program) add 1 more worker(CPU)
+
+1. compare with data standard
+2. generate justification
+3. 
+
+# if 
+
+---
+Shell Maximum Outlet Flow rate (m^3/Hr)
+
+Losses Cost
+Causing Asset
+
+Marketing & Trading
+	INT_TRADING_STRATEGY
+	BUY_SELL
+	TRADE_DATE
+
+---
+ESTIMATED RUNNING TIME (2 workers):
+Process Engineering: 13 minutes
+Physical Asset Management: 1 minute
+Marketing & Trading: 2 minutes
+
+ESTIMATED RUNNING TIME (3 workers):
+Civil / Structure & Pipeline Engineering (771 rows): 3 minutes
+Physical Asset Management (134 rows): 34 seconds
