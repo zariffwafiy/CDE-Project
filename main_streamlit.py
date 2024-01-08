@@ -80,6 +80,7 @@ def openai_similarity(word1, word2, word3):
         return word1, word2, 0, str(e)
 
 def main():
+
     # set page configuration 
     st.set_page_config(
         page_title="CDE Advisor: Semantic Similarity Comparison",
@@ -87,6 +88,40 @@ def main():
         layout="wide",
         initial_sidebar_state="expanded",
     )  
+
+    # HTML and CSS for setting background image and additional styles
+    background_html = """
+    <style>
+        body {
+            background-image: url('assets/petronas.jpg');
+            background-size: cover;
+            background-color: #00A160; /* Background color */
+            font-family: 'Arial', sans-serif; /* Font family */
+            color: #00A160; /* Text color */
+            padding: 20px; /* Padding for content */
+        }
+
+        h1 {
+            color: #00A160; /* Header text color */
+            text-align: center; /* Center-align header text */
+        }
+
+        p {
+            font-size: 18px; /* Font size for paragraphs */
+            line-height: 1.6; /* Line height for paragraphs */
+            color: #9be5c0;
+        }
+
+        .stApp {
+            color: #00A160; /* Text color for the entire app */
+        }
+
+        /* Add more styles as needed */
+
+    </style>
+    """
+    # Display the HTML with the background image
+    st.markdown(background_html, unsafe_allow_html=True)
  
     logo_image = "assets/petronas 4.png"
 
@@ -97,37 +132,50 @@ def main():
     st.sidebar.header("How to Use")
     st.sidebar.markdown("Please filter out the domain of the data dictionary and enter the data attribute/ data attribute description in the text area below.")
     st.sidebar.markdown("The semantic similarity score and glossary will be displayed on the below each corresponding data element.")
-    st.sidebar.header("Notes of RunTime")
-    st.sidebar.markdown("Civil / Structure & Pipeline Engineering (771 rows): 3 minutes")
-    st.sidebar.markdown("Electrical Engineering (1402 rows): 6 mins")
-    st.sidebar.markdown("Mechanical Engineering (2981 rows): 14 mins")
-    st.sidebar.markdown("Physical Asset Management (134 rows): 1 mins ")
-    st.sidebar.markdown("Materials, Corrosion & Inspection Engineering (926 rows): 4 mins")
-    st.sidebar.markdown("Process Engineering (2112 rows): 10 mins")
-    st.sidebar.markdown("Drilling (696 rows): 3 mins")
-    st.sidebar.markdown("Petroleum Engineering (1390 rows): 7 mins")
-    st.sidebar.markdown("Geoscience (1652 rows): 8 mins")
-    st.sidebar.markdown("Project Management (877 rows): 4 mins")
-    st.sidebar.markdown("Marketing & Trading (263 rows):  2 mins ")
     st.sidebar.divider()
     st.sidebar.info("**Data Scientist: [@zariffwafiy](https://github.com/zariffwafiy)**", icon="🧠")
 
     
-    st.title("🛢️CDE Advisor: Semantic Similarity Comparison")
+    st.title("📖CDE Advisor: Semantic Similarity Comparison")
     # Load your standard
     standard = pd.read_csv("data/PETRONAS Data Standard - All -  July 2023.csv")
 
+    # dictionary to store minutes for each domain
+    minutes_per_category = {
+        "Civil / Structure & Pipeline Engineering": 3, 
+        "Electrical Engineering": 6, 
+        "Mechanical Engineering": 14, 
+        "Physical Asset Management": 1, 
+        "Materials, Corrosion & Inspection Engineering": 4, 
+        "Process Engineering": 10, 
+        "Drilling": 3, 
+        "Petroleum Engineering": 7, 
+        "Geoscience": 8, 
+        "Project Management": 4, 
+        "Marketing & Trading": 2
+    }
+
+    # Calculate total minutes for "All"
+    total_minutes_all = sum(minutes_per_category.values())
+
+    filter_standard_options_with_minutes = [f"{option} ({minutes} mins)" for option, minutes in minutes_per_category.items()]
+    filter_standard_options_with_minutes.append(f"All ({total_minutes_all} mins)")
+
     # Create a dropdown for the user to choose from multiple values
-    filter_standard_options = ["All"] + standard["DATA DOMAIN"].str.strip().unique().tolist()
-    filter_standard = st.selectbox("Choose Data Domain", filter_standard_options)
+    filter_standard = st.selectbox("**Choose Data Domain**", filter_standard_options_with_minutes, index= len(filter_standard_options_with_minutes)-1)
 
-    if filter_standard_options == "All":
-        standard_filtered = standard 
-    
-    else: 
-        standard_filtered = standard[standard["DATA DOMAIN"] == filter_standard].reset_index(drop=True)
+    # Apply the condition
+    if "All (62 mins)" in filter_standard:
+        standard_filtered = standard
+    else:
+        # Get the first part before "("
+        selected_category = filter_standard.split("(")[0].strip()
 
-    field_description = st.text_area("Enter Data Attribute/ Data Attribute Description:")
+        # Filter the dataframe based on the selected category
+        standard_filtered = standard[standard["DATA DOMAIN"].str.strip() == selected_category].reset_index(drop=True)
+
+
+    field_description = st.text_area("**Enter Data Attribute/ Data Attribute Description:**")
 
     # data standard column "DATA ELEMENT"
     standard_elements = standard_filtered["DATA ELEMENT"].tolist()
@@ -144,9 +192,10 @@ def main():
     # element glossary pairs
     element_glossary_pairs = zip(standard_elements, standard_glossary)
 
-    st.header("Top 3 Matches:")
-
     if st.button("Compare"):
+        print(standard_filtered)
+        st.header("Top 3 Matches:")
+
         start_time = time.time()
 
         # Use ThreadPoolExecutor for parallel processing
