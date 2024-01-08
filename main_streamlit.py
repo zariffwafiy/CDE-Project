@@ -5,6 +5,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import streamlit as st
 import time
+from PIL import Image
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -79,8 +80,40 @@ def openai_similarity(word1, word2, word3):
         return word1, word2, 0, str(e)
 
 def main():
-    st.title("CDE Advisor: Semantic Similarity Comparison")
+    # set page configuration 
+    st.set_page_config(
+        page_title="CDE Advisor: Semantic Similarity Comparison",
+        page_icon=":bar_chart:",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )  
+ 
+    logo_image = "assets/petronas 4.png"
 
+    # Add sidebar for documentation  
+    st.sidebar.image(logo_image, width = 200)
+    st.sidebar.header("About")
+    st.sidebar.markdown("This is a simple prototype to compare the semantic similarity between a data attribute in a data dictionary and a data element in a data standard.")
+    st.sidebar.header("How to Use")
+    st.sidebar.markdown("Please filter out the domain of the data dictionary and enter the data attribute/ data attribute description in the text area below.")
+    st.sidebar.markdown("The semantic similarity score and glossary will be displayed on the below each corresponding data element.")
+    st.sidebar.header("Notes of RunTime")
+    st.sidebar.markdown("Civil / Structure & Pipeline Engineering (771 rows): 3 minutes")
+    st.sidebar.markdown("Electrical Engineering (1402 rows): 6 mins")
+    st.sidebar.markdown("Mechanical Engineering (2981 rows): 14 mins")
+    st.sidebar.markdown("Physical Asset Management (134 rows): 1 mins ")
+    st.sidebar.markdown("Materials, Corrosion & Inspection Engineering (926 rows): 4 mins")
+    st.sidebar.markdown("Process Engineering (2112 rows): 10 mins")
+    st.sidebar.markdown("Drilling (696 rows): 3 mins")
+    st.sidebar.markdown("Petroleum Engineering (1390 rows): 7 mins")
+    st.sidebar.markdown("Geoscience (1652 rows): 8 mins")
+    st.sidebar.markdown("Project Management (877 rows): 4 mins")
+    st.sidebar.markdown("Marketing & Trading (263 rows):  2 mins ")
+    st.sidebar.divider()
+    st.sidebar.info("**Data Scientist: [@zariffwafiy](https://github.com/zariffwafiy)**", icon="🧠")
+
+    
+    st.title("🛢️CDE Advisor: Semantic Similarity Comparison")
     # Load your standard
     standard = pd.read_csv("data/PETRONAS Data Standard - All -  July 2023.csv")
 
@@ -94,7 +127,7 @@ def main():
     else: 
         standard_filtered = standard[standard["DATA DOMAIN"] == filter_standard].reset_index(drop=True)
 
-    field_description = st.text_area("Enter Field Description/Field Attribute:")
+    field_description = st.text_area("Enter Data Attribute/ Data Attribute Description:")
 
     # data standard column "DATA ELEMENT"
     standard_elements = standard_filtered["DATA ELEMENT"].tolist()
@@ -111,6 +144,8 @@ def main():
     # element glossary pairs
     element_glossary_pairs = zip(standard_elements, standard_glossary)
 
+    st.header("Top 3 Matches:")
+
     if st.button("Compare"):
         start_time = time.time()
 
@@ -123,7 +158,6 @@ def main():
         sorted_scores = sorted(scores, key=lambda x: x[2], reverse=True)
 
         # Display the top 3 highest scored comparisons and their corresponding data elements
-        st.header("Top 3 Matches:")
         for i, (word1, word2, score, word3) in enumerate(sorted_scores[:3]):
             st.text(f"{i+1}. Data Element: {word2}\n Similarity Score: {score}\n Glossary: {word3}. \n" + " Data Group: " + standard_group[i+1] + "\n" + " Data Entity: " + standard_entity[i+1] + "\n")
 
@@ -136,7 +170,3 @@ def main():
 if __name__ == "__main__":
     configure_openai()
     main()
-
-    # display logs in a scrollable
-    # logs = buffer.getvalue().splitlines()
-    # st.text_area("Logs", "\n".join(logs), height=200)
