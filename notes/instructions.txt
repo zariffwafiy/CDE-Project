@@ -1,0 +1,20 @@
+1.download python installer 
+https://www.python.org/downloads/
+
+2.install python 
+
+3.get dependencies
+cmd> pip install -r requirements.txt
+
+4.download and unzip test_run folder
+
+5.navigate to test_run folder
+cmd> cd Downloads/test_run
+
+6.run python script
+cmd> streamlit run main_streamlit.py
+
+---
+how we do
+demo
+how to use/install
