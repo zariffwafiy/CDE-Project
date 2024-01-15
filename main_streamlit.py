@@ -84,10 +84,10 @@ def main():
     # set page configuration 
     st.set_page_config(
         page_title="CDE Advisor: Semantic Similarity Comparison",
-        page_icon=":bar_chart:",
+        page_icon=":oil_drum:",
         layout="wide",
         initial_sidebar_state="expanded",
-    )  
+    )
 
     # HTML and CSS for setting background image and additional styles
     background_html = """

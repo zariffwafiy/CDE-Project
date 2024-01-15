@@ -5,13 +5,7 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import streamlit as st
 import time
-from functools import partial
-import sys
-from io import StringIO
-
-# Redirect stdout to a buffer
-# buffer = StringIO()
-# sys.stdout = buffer
+from PIL import Image
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -86,64 +80,157 @@ def openai_similarity(word1, word2, word3):
         return word1, word2, 0, str(e)
 
 def main():
-    st.title("CDE Advisor: Semantic Similarity Comparison")
 
-    # Load your standard
-    standard = pd.read_csv("data/PETRONAS Data Standard - All -  July 2023.csv")
+    # set page configuration 
+    st.set_page_config(
+        page_title="CDE Advisor: Semantic Similarity Comparison",
+        page_icon=":bar_chart:",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )  
 
-    # Create a dropdown for the user to choose from multiple values
-    filter_standard_options = ["All"] + standard["DATA DOMAIN"].str.strip().unique().tolist()
-    filter_standard = st.selectbox("Choose Data Domain", filter_standard_options)
+    # HTML and CSS for setting background image and additional styles
+    background_html = """
+    <style>
+        body {
+            background-image: url('assets/petronas.jpg');
+            background-size: cover;
+            background-color: #00A160; /* Background color */
+            font-family: 'Arial', sans-serif; /* Font family */
+            color: #00A160; /* Text color */
+            padding: 20px; /* Padding for content */
+        }
 
-    if filter_standard_options == "All":
-        standard_filtered = standard 
+        h1 {
+            color: #00A160; /* Header text color */
+            text-align: center; /* Center-align header text */
+        }
+
+        p {
+            font-size: 18px; /* Font size for paragraphs */
+            line-height: 1.6; /* Line height for paragraphs */
+            color: #9be5c0;
+        }
+
+        .stApp {
+            color: #00A160; /* Text color for the entire app */
+        }
+
+        /* Add more styles as needed */
+
+    </style>
+    """
+
+    # Display the HTML with the background image
+    st.markdown(background_html, unsafe_allow_html=True)
+
+    logo_image = "assets/petronas 4.png"
+
+    # Add sidebar for documentation  
+    st.sidebar.image(logo_image, width = 200)
+    st.sidebar.header("About")
+    st.sidebar.markdown("This is a simple prototype to compare the semantic similarity between a data attribute in a data dictionary and a data element in a data standard.")
+    st.sidebar.header("How to Use")
+    st.sidebar.markdown("Please filter out the domain of the data dictionary and enter the data attribute/ data attribute description in the text area below.")
+    st.sidebar.markdown("The semantic similarity score and glossary will be displayed on the below each corresponding data element.")
+    st.sidebar.divider()
+    st.sidebar.info("**Data Scientist: [@zariffwafiy](https://github.com/zariffwafiy)**", icon="🧠")
     
+    st.title("📖CDE Advisor: Semantic Similarity Comparison")
+    st.write("")
+    st.write("")
+    # Load your standard
+    # standard = pd.read_csv("data/PETRONAS Data Standard - All -  July 2023.csv")
+
+    uploaded_file = st.file_uploader("**Please upload the latest PETRONAS Data Standard**", type = ["xlsx"])
+
+    if uploaded_file is not None:
+        st.success("File uploaded successfully!")
+        st.write("")
+
+        # read excel file
+        standard = pd.read_excel(uploaded_file)
+
+        # dictionary to store minutes for each domain
+        minutes_per_category = {
+            "Civil / Structure & Pipeline Engineering": 3, 
+            "Electrical Engineering": 6, 
+            "Mechanical Engineering": 14, 
+            "Physical Asset Management": 1, 
+            "Materials, Corrosion & Inspection Engineering": 4, 
+            "Process Engineering": 10, 
+            "Drilling": 3, 
+            "Petroleum Engineering": 7, 
+            "Geoscience": 8, 
+            "Project Management": 4, 
+            "Marketing & Trading": 2
+        }
+
+        # Calculate total minutes for "All"
+        total_minutes_all = sum(minutes_per_category.values())
+
+        filter_standard_options_with_minutes = [f"{option} ({minutes} mins)" for option, minutes in minutes_per_category.items()]
+        filter_standard_options_with_minutes.append(f"All ({total_minutes_all} mins)")
+
+        # Create a dropdown for the user to choose from multiple values
+        filter_standard = st.selectbox("**Choose Data Domain**", filter_standard_options_with_minutes, index= len(filter_standard_options_with_minutes)-1)
+        st.write("")
+
+        # Apply the condition
+        if "All (62 mins)" in filter_standard:
+            standard_filtered = standard
+
+        else:
+            # Get the first part before "("
+            selected_category = filter_standard.split("(")[0].strip()
+
+            # Filter the dataframe based on the selected category
+            standard_filtered = standard[standard["DATA DOMAIN"].str.strip() == selected_category].reset_index(drop=True)
+
+        field_description = st.text_area("**Enter Data Attribute/ Data Attribute Description:**")
+
+        # data standard column "DATA ELEMENT"
+        standard_elements = standard_filtered["DATA ELEMENT"].tolist()
+    
+        # data standard columns "BUSINESS DEFINITION/ GLOSSARY"
+        standard_glossary = standard_filtered["BUSINESS DEFINITION/ GLOSSARY"].tolist()
+
+        # data standard column "DATA GROUP"
+        standard_group = standard_filtered["DATA GROUP"].tolist()
+
+        # data standard column "DATA ENTITY"
+        standard_entity = standard_filtered["DATA ENTITY"].tolist()
+
+        # element glossary pairs
+        element_glossary_pairs = zip(standard_elements, standard_glossary)
+
+        if st.button("Compare"):
+            print(standard_filtered)
+            st.header("Top 3 Matches:")
+
+            start_time = time.time()
+
+            # Use ThreadPoolExecutor for parallel processing
+            with ThreadPoolExecutor(max_workers = 3) as executor:
+                # Use the executor to process each data element concurrently
+                scores = list(executor.map(lambda x: openai_similarity(field_description, x[0], x[1]), element_glossary_pairs))
+
+            # Sort the scores in descending order based on the inner tuple's second element
+            sorted_scores = sorted(scores, key=lambda x: x[2], reverse=True)
+
+            # Display the top 3 highest scored comparisons and their corresponding data elements
+            for i, (word1, word2, score, word3) in enumerate(sorted_scores[:3]):
+                st.text(f"{i+1}. Data Element: {word2}\n Similarity Score: {score}\n Glossary: {word3}. \n" + " Data Group: " + standard_group[i+1] + "\n" + " Data Entity: " + standard_entity[i+1] + "\n")
+
+            # Display the total running time in minutes and seconds
+            total_time_seconds = time.time() - start_time
+            minutes = int(total_time_seconds // 60)
+            remaining_seconds = total_time_seconds % 60
+            st.write(f"Running Time: {minutes} minutes and {remaining_seconds: .2f} seconds") 
+
     else: 
-        standard_filtered = standard[standard["DATA DOMAIN"] == filter_standard].reset_index(drop=True)
-
-    field_description = st.text_area("Enter Field Description/Field Attribute:")
-
-    # data standard column "DATA ELEMENT"
-    standard_elements = standard_filtered["DATA ELEMENT"].tolist()
- 
-    # data standard columns "BUSINESS DEFINITION/ GLOSSARY"
-    standard_glossary = standard_filtered["BUSINESS DEFINITION/ GLOSSARY"].tolist()
-
-    # data standard column "DATA GROUP"
-    standard_group = standard_filtered["DATA GROUP"].tolist()
-
-    # data standard column "DATA ENTITY"
-    standard_entity = standard_filtered["DATA ENTITY"].tolist()
-
-    # element glossary pairs
-    element_glossary_pairs = zip(standard_elements, standard_glossary)
-
-    if st.button("Compare"):
-        start_time = time.time()
-
-        # Use ThreadPoolExecutor for parallel processing
-        with ThreadPoolExecutor(max_workers = 3) as executor:
-            # Use the executor to process each data element concurrently
-            scores = list(executor.map(lambda x: openai_similarity(field_description, x[0], x[1]), element_glossary_pairs))
-
-        # Sort the scores in descending order based on the inner tuple's second element
-        sorted_scores = sorted(scores, key=lambda x: x[2], reverse=True)
-
-        # Display the top 3 highest scored comparisons and their corresponding data elements
-        st.header("Top 3 Matches:")
-        for i, (word1, word2, score, word3) in enumerate(sorted_scores[:3]):
-            st.text(f"{i+1}. Data Element: {word2}\n Similarity Score: {score}\n Glossary: {word3}. \n" + " Data Group: " + standard_group[i+1] + "\n" + " Data Entity: " + standard_entity[i+1] + "\n")
-
-        # Display the total running time in minutes and seconds
-        total_time_seconds = time.time() - start_time
-        minutes = int(total_time_seconds // 60)
-        remaining_seconds = total_time_seconds % 60
-        st.write(f"Running Time: {minutes} minutes and {remaining_seconds: .2f} seconds") 
+        st.write("No file detected, please upload a file")
 
 if __name__ == "__main__":
     configure_openai()
     main()
-
-    # display logs in a scrollable
-    # logs = buffer.getvalue().splitlines()
-    # st.text_area("Logs", "\n".join(logs), height=200)
