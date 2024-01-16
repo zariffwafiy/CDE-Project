@@ -119,7 +119,7 @@ def main():
         /* Add more styles as needed */
 
     </style>
-    """
+    """ 
 
     # Display the HTML with the background image
     st.markdown(background_html, unsafe_allow_html=True)
