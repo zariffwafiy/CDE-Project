@@ -39,4 +39,16 @@ Marketing & Trading: 2 minutes
 
 ESTIMATED RUNNING TIME (3 workers):
 Civil / Structure & Pipeline Engineering (771 rows): 3 minutes
-Physical Asset Management (134 rows): 34 seconds
+Electrical Engineering (1402 rows): 6 mins
+Instrument / Control Engineering (2714 rows): 13 mins
+Mechanical Engineering (2981 rows): 14 mins
+Physical Asset Management (134 rows): 1 mins 
+Materials, Corrosion & Inspection Engineering (926 rows): 4 mins
+Process Engineering (2112 rows): 10 mins
+Drilling (696 rows): 3 mins
+Petroleum Engineering (1390 rows): 7 mins
+Geoscience (1652 rows): 8 mins
+Project Management (877 rows): 4 mins
+Marketing & Trading (263 rows):  2 mins 
+
+220 rows per minute

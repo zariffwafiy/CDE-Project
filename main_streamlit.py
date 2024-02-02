@@ -5,7 +5,6 @@ import logging
 from concurrent.futures import ThreadPoolExecutor
 import streamlit as st
 import time
-from PIL import Image
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -13,14 +12,29 @@ logger = logging.getLogger(__name__)
 
 # Constants
 MAX_TOKENS = 15
-TEMPERATURE = 0
+TEMPERATURE = 0.8
 NUM_COMPLETIONS = 1
+
+def clean_and_tokenize(word):
+    # Remove spaces and other common symbols
+    cleaned_word = ''.join(char for char in word.lower() if char.isalnum())
+    return set(cleaned_word)
+
+def jaccard_similarity(word1, word2):
+    set1 = clean_and_tokenize(word1)
+    set2 = clean_and_tokenize(word2)
+    
+    intersection_size = len(set1.intersection(set2))
+    union_size = len(set1.union(set2))
+    
+    similarity_score = intersection_size / union_size if union_size != 0 else 0.0
+    return similarity_score
 
 def configure_openai():
     openai.api_type = "azure"
-    openai.api_base = "https://openailx.openai.azure.com/"
-    openai.api_version = "2022-12-01"
-    openai.api_key = "3be6ba13cc1f4a16bd5293d8feba2036"
+    openai.api_base = "https://ptsg5edhopenai01.openai.azure.com/"
+    openai.api_version = "2023-09-15-preview"
+    openai.api_key = "d929ffb032eb4ef186804b69cbb95531"
 
 def construct_prompt(word1, word2, word3):
     definitions = (
@@ -45,7 +59,7 @@ def openai_similarity(word1, word2, word3):
         prompt = construct_prompt(word1, word2, word3)
 
         response = openai.Completion.create(
-            engine='text-davinci-003',
+            engine='CDE-Advisor',
             prompt=prompt,
             max_tokens=MAX_TOKENS,
             temperature=TEMPERATURE,
@@ -92,55 +106,30 @@ def main():
     # HTML and CSS for setting background image and additional styles
     background_html = """
     <style>
-        body {
-            background-image: url('assets/petronas.jpg');
-            background-size: cover;
-            background-color: #00A160; /* Background color */
-            font-family: 'Arial', sans-serif; /* Font family */
-            color: #00A160; /* Text color */
-            padding: 20px; /* Padding for content */
-        }
-
         h1 {
-            color: #00A160; /* Header text color */
             text-align: center; /* Center-align header text */
         }
-
-        p {
-            font-size: 18px; /* Font size for paragraphs */
-            line-height: 1.6; /* Line height for paragraphs */
-            color: #9be5c0;
-        }
-
-        .stApp {
-            color: #00A160; /* Text color for the entire app */
-        }
-
-        /* Add more styles as needed */
-
     </style>
     """ 
 
     # Display the HTML with the background image
     st.markdown(background_html, unsafe_allow_html=True)
 
-    logo_image = "assets/petronas 4.png"
+    logo_image = "assets/petronas.png"
 
     # Add sidebar for documentation  
     st.sidebar.image(logo_image, width = 200)
     st.sidebar.header("About")
     st.sidebar.markdown("This is a simple prototype to compare the semantic similarity between a data attribute in a data dictionary and a data element in a data standard.")
     st.sidebar.header("How to Use")
-    st.sidebar.markdown("Please filter out the domain of the data dictionary and enter the data attribute/ data attribute description in the text area below.")
-    st.sidebar.markdown("The semantic similarity score and glossary will be displayed on the below each corresponding data element.")
+    st.sidebar.markdown("Please filter out the domain of the data dictionary and enter the data attribute/ data attribute description in the text area below. Choose the number of matches to be displayed using the slider.")
+    st.sidebar.markdown("The semantic similarity score and glossary will be displayed on for each of the corresponding data element.")
     st.sidebar.divider()
     st.sidebar.info("**Data Scientist: [@zariffwafiy](https://github.com/zariffwafiy)**", icon="🧠")
     
     st.title("📖CDE Advisor: Semantic Similarity Comparison")
     st.write("")
     st.write("")
-    # Load your standard
-    # standard = pd.read_csv("data/PETRONAS Data Standard - All -  July 2023.csv")
 
     uploaded_file = st.file_uploader("**Please upload the latest PETRONAS Data Standard**", type = ["xlsx"])
 
@@ -151,76 +140,64 @@ def main():
         # read excel file
         standard = pd.read_excel(uploaded_file)
 
-        # dictionary to store minutes for each domain
-        minutes_per_category = {
-            "Civil / Structure & Pipeline Engineering": 3, 
-            "Electrical Engineering": 6, 
-            "Mechanical Engineering": 14, 
-            "Physical Asset Management": 1, 
-            "Materials, Corrosion & Inspection Engineering": 4, 
-            "Process Engineering": 10, 
-            "Drilling": 3, 
-            "Petroleum Engineering": 7, 
-            "Geoscience": 8, 
-            "Project Management": 4, 
-            "Marketing & Trading": 2
-        }
-
-        # Calculate total minutes for "All"
-        total_minutes_all = sum(minutes_per_category.values())
-
-        filter_standard_options_with_minutes = [f"{option} ({minutes} mins)" for option, minutes in minutes_per_category.items()]
-        filter_standard_options_with_minutes.append(f"All ({total_minutes_all} mins)")
+        # Create a dropdown for the user to choose from multiple values
+        filter_standard_options = standard["DATA DOMAIN"].unique().tolist()
+        filter_standard_options = ["All"] + filter_standard_options
 
         # Create a dropdown for the user to choose from multiple values
-        filter_standard = st.selectbox("**Choose Data Domain**", filter_standard_options_with_minutes, index= len(filter_standard_options_with_minutes)-1)
+        filter_standard = st.selectbox("**Choose Data Domain**", filter_standard_options, index = 0)
         st.write("")
 
         # Apply the condition
-        if "All (62 mins)" in filter_standard:
+        if "All" in filter_standard:
             standard_filtered = standard
 
         else:
             # Get the first part before "("
-            selected_category = filter_standard.split("(")[0].strip()
+            selected_category = filter_standard
 
             # Filter the dataframe based on the selected category
             standard_filtered = standard[standard["DATA DOMAIN"].str.strip() == selected_category].reset_index(drop=True)
 
-        field_description = st.text_area("**Enter Data Attribute/ Data Attribute Description:**")
+        data_input = st.text_area("**Enter Data Attribute/ Data Attribute Description:**")
+
+        num_matches_slider = st.slider("**Select the number of top matches to display (between 1 and 10)**", min_value=1, max_value=10, value=3)
+
+        # Calculate Jaccard similarity scores for each data element in 'standard_filtered'
+        jaccard_scores = standard_filtered['DATA ELEMENT'].apply(lambda elem: jaccard_similarity(data_input, elem))
+
+        # Add the Jaccard similarity scores as a new column to 'standard_filtered'
+        standard_filtered['JACCARD_SCORE'] = jaccard_scores
+
+        # Sort 'standard_filtered' based on Jaccard similarity scores in descending order
+        sorted_standard_filtered = standard_filtered.sort_values(by='JACCARD_SCORE', ascending=False).head(100)
 
         # data standard column "DATA ELEMENT"
-        standard_elements = standard_filtered["DATA ELEMENT"].tolist()
+        standard_elements = sorted_standard_filtered["DATA ELEMENT"].tolist()
     
         # data standard columns "BUSINESS DEFINITION/ GLOSSARY"
-        standard_glossary = standard_filtered["BUSINESS DEFINITION/ GLOSSARY"].tolist()
-
-        # data standard column "DATA GROUP"
-        standard_group = standard_filtered["DATA GROUP"].tolist()
-
-        # data standard column "DATA ENTITY"
-        standard_entity = standard_filtered["DATA ENTITY"].tolist()
+        standard_glossary = sorted_standard_filtered["BUSINESS DEFINITION/ GLOSSARY"].tolist()
 
         # element glossary pairs
         element_glossary_pairs = zip(standard_elements, standard_glossary)
 
         if st.button("Compare"):
-            print(standard_filtered)
-            st.header("Top 3 Matches:")
+            st.header("Top Matches:")
 
             start_time = time.time()
 
             # Use ThreadPoolExecutor for parallel processing
             with ThreadPoolExecutor(max_workers = 3) as executor:
                 # Use the executor to process each data element concurrently
-                scores = list(executor.map(lambda x: openai_similarity(field_description, x[0], x[1]), element_glossary_pairs))
+                # semantic similarity matching
+                scores = list(executor.map(lambda x: openai_similarity(data_input, x[0], x[1]), element_glossary_pairs))
 
             # Sort the scores in descending order based on the inner tuple's second element
             sorted_scores = sorted(scores, key=lambda x: x[2], reverse=True)
 
             # Display the top 3 highest scored comparisons and their corresponding data elements
-            for i, (word1, word2, score, word3) in enumerate(sorted_scores[:3]):
-                st.text(f"{i+1}. Data Element: {word2}\n Similarity Score: {score}\n Glossary: {word3}. \n" + " Data Group: " + standard_group[i+1] + "\n" + " Data Entity: " + standard_entity[i+1] + "\n")
+            for i, (word1, word2, score, word3) in enumerate(sorted_scores[:num_matches_slider]):
+                st.text(f"{i+1}. Data Element: {word2}\n Similarity Score: {score}\n Glossary: {word3}. \n")
 
             # Display the total running time in minutes and seconds
             total_time_seconds = time.time() - start_time
