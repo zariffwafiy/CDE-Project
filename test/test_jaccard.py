@@ -1,19 +1,33 @@
-def clean_and_tokenize(word):
-    # Remove spaces and other common symbols
-    cleaned_word = ''.join(char for char in word.lower() if char.isalnum())
-    return set(cleaned_word)
+import re
+from nltk.stem import PorterStemmer
+from nltk.corpus import stopwords
 
-def jaccard_similarity(word1, word2):
-    set1 = clean_and_tokenize(word1)
-    set2 = clean_and_tokenize(word2)
-    
-    intersection_size = len(set1.intersection(set2))
-    union_size = len(set1.union(set2))
-    
-    similarity_score = intersection_size / union_size if union_size != 0 else 0.0
-    return similarity_score
+# Download the NLTK resources if not already downloaded
+import nltk
+nltk.download('stopwords')
 
-word1 = "Flowrate"
-word2 = "flow rate"
+# Function to preprocess and calculate Jaccard similarity
+def jaccard_similarity(str1, str2):
+    # Remove punctuations, symbols, and convert to lowercase
+    str1 = re.sub(r'[^\w\s]', '', str1).lower()
+    str2 = re.sub(r'[^\w\s]', '', str2).lower()
 
-print(f"Jaccard sim: " + str(jaccard_similarity(word1, word2)))
+    # Create sets of individual letters
+    set1 = set(''.join(str1.split()))
+    set2 = set(''.join(str2.split()))
+
+    # Calculate Jaccard similarity
+    intersection = len(set1.intersection(set2))
+    union = len(set1.union(set2))
+    similarity = intersection / union if union > 0 else 0
+    return similarity
+
+# Input strings
+word1 = "sensor tagging"
+word2 = "Real-Time thickness Sensor Tagging"
+
+# Calculate Jaccard similarity
+similarity_score = jaccard_similarity(word1, word2)
+
+# Print the result
+print(f"Jaccard Similarity between '{word1}' and '{word2}': {similarity_score}")
