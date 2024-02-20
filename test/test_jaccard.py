@@ -1,10 +1,5 @@
 import re
-from nltk.stem import PorterStemmer
-from nltk.corpus import stopwords
-
-# Download the NLTK resources if not already downloaded
 import nltk
-nltk.download('stopwords')
 
 # Function to preprocess and calculate Jaccard similarity
 def jaccard_similarity(str1, str2):
@@ -23,8 +18,8 @@ def jaccard_similarity(str1, str2):
     return similarity
 
 # Input strings
-word1 = "sensor tagging"
-word2 = "Real-Time thickness Sensor Tagging"
+word1 = "speed of wolf"
+word2 = "flowrate of fluid"
 
 # Calculate Jaccard similarity
 similarity_score = jaccard_similarity(word1, word2)

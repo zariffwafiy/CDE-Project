@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 # Constants
 MAX_TOKENS = 50
-TEMPERATURE = 0.5
+TEMPERATURE = 0.2
 NUM_COMPLETIONS = 1
 ENGINE = "CDE-Advisor"
 LOG_PROBS = 0
@@ -50,7 +50,7 @@ def configure_openai():
     
 def construct_prompt(word1, word2, word3):
     definitions = (
-        "Data Attribute - It is at the lowest level of data taxonomy in a data dictionary and received from clients/businesses.\n"
+        "Data Attribute - It is at the lowest level of data taxonomy in a data dictionary and received from businesses.\n"
         "Data Dictionary - It is a collection of data attributes.\n"
         "Data Element - It is at the lowest level of data taxonomy in a data standard and .\n"
         "Data Standard - It is a collection of data elements that is used by analyst.\n"
@@ -60,7 +60,7 @@ def construct_prompt(word1, word2, word3):
     
     prompt = (
         f"{definitions}\n{context}\n"
-        f"Provide a semantic similarity score in four decimal places (0.xxxx) between data attribute: '{word1}' "
+        f"Provide a precise semantic similarity score in four decimal places(0.xxxx) between data attribute: '{word1}' "
         f"and data element: '{word2}'. '{word2}' is defined as: '{word3}'. Justify the score in less than 10 words."
     )
 
@@ -132,7 +132,8 @@ def main():
             }
         </style>
         """ 
-
+        raise RateLimitExceededException("The program is unusable for awhile. Please contact the author or try again after 2 days.")
+ 
         # Display the HTML with the background image
         st.markdown(background_html, unsafe_allow_html=True)
 
@@ -184,104 +185,58 @@ def main():
 
             num_matches_slider = st.slider("**Select the number of top matches to display (between 1 and 10)**", min_value=1, max_value=10, value=3)
 
-            # choose model
-            models = ["OpenAI", "Jaccard + OpenAI"]
-            model = st.selectbox("**Choose Model**", models,  index = 0)
-
-            if model == "OpenAI":
-
-                # data standard column "DATA ELEMENT"
-                standard_elements = standard_filtered["DATA ELEMENT"].tolist()
+            # Calculate Jaccard similarity scores for each data element in 'standard_filtered'
+            jaccard_scores = standard_filtered['DATA ELEMENT'].apply(lambda elem: jaccard_similarity(data_input, elem))
             
-                # data standard columns "BUSINESS DEFINITION/ GLOSSARY"
-                standard_glossary = standard_filtered["BUSINESS DEFINITION/ GLOSSARY"].tolist()
+            # Add the Jaccard similarity scores as a new column to 'standard_filtered'
+            standard_filtered['JACCARD_SCORE'] = jaccard_scores
 
-                # data standard column "DATA GROUP"
-                standard_group = standard_filtered["DATA GROUP"].tolist()
+            # Sort 'standard_filtered' based on Jaccard similarity scores in descending order
+            sorted_standard_filtered = standard_filtered.sort_values(by='JACCARD_SCORE', ascending=False).reset_index().head(150)
 
-                # data standard column "DATA ENTITY"
-                standard_entity = standard_filtered["DATA ENTITY"].tolist()
+            # data standard column "DATA ELEMENT"
+            standard_elements = sorted_standard_filtered["DATA ELEMENT"].tolist()
+        
+            # data standard columns "BUSINESS DEFINITION/ GLOSSARY"
+            standard_glossary = sorted_standard_filtered["BUSINESS DEFINITION/ GLOSSARY"].tolist()
 
-                # standard info
-                standard_info = zip(standard_elements, standard_glossary, standard_group, standard_entity)
+            # data group columns "DATA GROUP"
+            standard_group = sorted_standard_filtered["DATA GROUP"].tolist()
 
-                if st.button("Compare"):
-                    st.header("Top Matches:")
+            # data entity columns "DATA ENTITY"
+            standard_entity = sorted_standard_filtered["DATA ENTITY"].tolist()
 
-                    start_time = time.time()
+            # element glossary pairs
+            standard_info = zip(standard_elements, standard_glossary, standard_group, standard_entity)
 
-                    # Use ThreadPoolExecutor for parallel processing
-                    with ThreadPoolExecutor(max_workers = 2) as executor:
-                        # Use the executor to process each data element concurrently, semantic similarity matching
-                        scores = list(executor.map(lambda x: openai_similarity(data_input, x[0], x[1], x[2], x[3]), standard_info))
+            if st.button("Compare"):
+                st.header("Top Matches:")
 
-                    # Sort the scores in descending order based on the inner tuple's second element
-                    sorted_scores = sorted(scores, key=lambda x: x[2], reverse=True)
+                start_time = time.time()
 
-                    # Display the top 3 highest scored comparisons and their corresponding data elements
-                    for i, (word1, word2, score, word3, group, entity) in enumerate(sorted_scores[:num_matches_slider]):
-                        st.text(f"{i+1}. Data Element: {word2}\n Similarity Score: {score}\n Glossary: {word3}. \n Data Group: {group}\n Data Entity: {entity}\n")
+                # Use ThreadPoolExecutor for parallel processing
+                with ThreadPoolExecutor(max_workers = 2) as executor:
+                    # Use the executor to process each data element concurrently, semantic similarity matching
+                    scores = list(executor.map(lambda x: openai_similarity(data_input, x[0], x[1], x[2], x[3]), standard_info))
 
-                    # Display the total running time in minutes and seconds
-                    total_time_seconds = time.time() - start_time
-                    minutes = int(total_time_seconds // 60)
-                    remaining_seconds = total_time_seconds % 60
-                    st.write(f"Running Time: {minutes} minutes and {remaining_seconds: .2f} seconds") 
+                # Sort the scores in descending order based on the inner tuple's second element
+                sorted_scores = sorted(scores, key=lambda x: x[2], reverse=True)
 
-            else:
-                # Calculate Jaccard similarity scores for each data element in 'standard_filtered'
-                jaccard_scores = standard_filtered['DATA ELEMENT'].apply(lambda elem: jaccard_similarity(data_input, elem))
-                
-                # Add the Jaccard similarity scores as a new column to 'standard_filtered'
-                standard_filtered['JACCARD_SCORE'] = jaccard_scores
+                # Display the top 3 highest scored comparisons and their corresponding data elements
+                for i, (word1, word2, score, word3, group, entity) in enumerate(sorted_scores[:num_matches_slider]):
+                    st.text(f"{i+1}. Data Element: {word2}\n Similarity Score: {score}\n Glossary: {word3}. \n Data Group: {group}\n Data Entity: {entity}\n")
 
-                # Sort 'standard_filtered' based on Jaccard similarity scores in descending order
-                sorted_standard_filtered = standard_filtered.sort_values(by='JACCARD_SCORE', ascending=False).reset_index().head(150)
-                print(sorted_standard_filtered[["DATA ELEMENT", "JACCARD_SCORE"]])
-
-                # data standard column "DATA ELEMENT"
-                standard_elements = sorted_standard_filtered["DATA ELEMENT"].tolist()
-            
-                # data standard columns "BUSINESS DEFINITION/ GLOSSARY"
-                standard_glossary = sorted_standard_filtered["BUSINESS DEFINITION/ GLOSSARY"].tolist()
-
-                # data group columns "DATA GROUP"
-                standard_group = sorted_standard_filtered["DATA GROUP"].tolist()
-
-                # data entity columns "DATA ENTITY"
-                standard_entity = sorted_standard_filtered["DATA ENTITY"].tolist()
-
-                # element glossary pairs
-                standard_info = zip(standard_elements, standard_glossary, standard_group, standard_entity)
-
-                if st.button("Compare"):
-                    st.header("Top Matches:")
-
-                    start_time = time.time()
-
-                    # Use ThreadPoolExecutor for parallel processing
-                    with ThreadPoolExecutor(max_workers = 2) as executor:
-                        # Use the executor to process each data element concurrently, semantic similarity matching
-                        scores = list(executor.map(lambda x: openai_similarity(data_input, x[0], x[1], x[2], x[3]), standard_info))
-
-                    # Sort the scores in descending order based on the inner tuple's second element
-                    sorted_scores = sorted(scores, key=lambda x: x[2], reverse=True)
-
-                    # Display the top 3 highest scored comparisons and their corresponding data elements
-                    for i, (word1, word2, score, word3, group, entity) in enumerate(sorted_scores[:num_matches_slider]):
-                        st.text(f"{i+1}. Data Element: {word2}\n Similarity Score: {score}\n Glossary: {word3}. \n Data Group: {group}\n Data Entity: {entity}\n")
-
-                    # Display the total running time in minutes and seconds
-                    total_time_seconds = time.time() - start_time
-                    minutes = int(total_time_seconds // 60)
-                    remaining_seconds = total_time_seconds % 60
-                    st.write(f"Running Time: {minutes} minutes and {remaining_seconds: .2f} seconds") 
+                # Display the total running time in minutes and seconds
+                total_time_seconds = time.time() - start_time
+                minutes = int(total_time_seconds // 60)
+                remaining_seconds = total_time_seconds % 60
+                st.write(f"Running Time: {minutes} minutes and {remaining_seconds: .2f} seconds") 
 
         else: 
             st.write("No file detected, please upload a file")
 
     except Exception as e:
-        st.error("**OpenAI rate limit exceeded. Someone else is using the tool .please try again later.**")
+        st.error("**The program is unusable for awhile. Please contact the author or try again after 2 days.**")
         logging.error(e, exc_info=True)
 
 if __name__ == "__main__":
