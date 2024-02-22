@@ -1,0 +1,23 @@
+increase number of prompts (nested / stacked) 
+
+` 
+find out the sensitivity score - fix prompt 
+make a conclusion of sheets
+
+not feasible
+	table description vs glossary
+	field name vs data entity
+	table desc vs data element
+	table name vs glossary
+
+iteration 0 : single prompt without context
+	score = 0.6 + 
+iteration 1 : double prompt with context
+iteration 2 : double prompt with definition of data dictionaries and data standards
+	didnt work, very bad results, unable to make comparisons 
+	
+
+field desc vs glossary
+	equipment catalog profile vs catalog profile
+---
+iteration 

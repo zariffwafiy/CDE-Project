@@ -1,0 +1,19 @@
+EDA
+outliers and clean data
+class imbalance, normalize data, join multiple data
+data manipulation,
+	add columns
+	add rows
+	clean missing data
+	edit metadata
+	convert to indicator values
+	join data
+	remove duplicate rows
+sample and split
+	partition and sample
+	split data
+
+feature selection
+feature extraction
+
+Done going through the CA slides

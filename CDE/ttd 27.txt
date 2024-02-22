@@ -1,0 +1,5 @@
+batch of rows to algo
+	input: table name, table desc, domain
+
+data entity
+data element

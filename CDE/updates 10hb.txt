@@ -1,0 +1,21 @@
+problems / challenges: 
+1. jaccard similarity 
+	only catches syntax, not semantic (words to letter sets, intersection / union)
+2. spacy(library package) 
+	pre trained language processing models. (not available in company device, and cannot identify abbreviations)
+3. word2vec(custom word embeddings) 
+	have to be trained with an extensive(really huge) amount of corpus
+
+solution
+1. to train a model for named entity recognition (NER) for abbreviations
+this is for labelling abbreviations to full form word, 
+	- conditional random fields (CRF)
+	- recurrent neural networks (RNN)
+	- bidirectional LSTM
+
+https://stackoverflow.com/questions/43510778/python-how-to-intuit-word-from-abbreviated-text-using-nlp
+https://github.com/avidale/weirdMath/blob/master/nlp/abbreviation_spellchecker_Frodo.ipynb
+
+2. use open ai to figure out the full form of abbreviations
+
+3. generate a larger corpus

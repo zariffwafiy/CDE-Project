@@ -1,0 +1,38 @@
+include all domains
+data standard - include biz def
+data dictionary - include field desc
+suggest q,r,s,t in data dict
+
+1. table name vs entity name
+2. table desc vs entity name
+3. table name vs entity desc
+4. table desc vs entity desc
+
+1. field name vs entity name
+2. field desc vs entity name
+3. field name vs entity desc
+4. field desc vs entity desc
+
+1. (table name + table desc) vs (entity name + entity desc)
+
+data dictionary
+	table name
+	table desc
+	field name
+	field desc
+data standard
+	entity name
+	entity desc
+
+assumption
+	entity name = data element
+	no entity description
+
+new rules:
+	1. table name / data element
+	2. table desc / data element
+	
+	3. field name / data element
+	4. field desc / data element
+
+	5. (table name + table desc) vs (entity name)
